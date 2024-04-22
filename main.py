@@ -19,15 +19,12 @@ class Player:
         self.player = pygame.Rect(x1_size, y1_size, x2_size, y2_size)
         self.x = self
 
-
     def create_player(self):
         pygame.draw.rect(self.screen, (255, 0, 0), self.player, 0)
 
     def get_player(self):
         return self.player
 
-    def move_ip(self, param, param1):
-        self.player.move_ip(param, param1)
 
 
 class Create_rooms:
@@ -46,7 +43,8 @@ class Create_rooms:
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
-rect = pygame.Rect(580, 290, 10, 10)
+player = Player(580, 290, 10, 10, screen)
+rect = player.get_player()
 
 running = True
 while running:
@@ -70,11 +68,11 @@ while running:
                 rect.move_ip(0, -20)
             elif event.key == pygame.K_s and rect.y + 20 < SCREEN_HEIGHT:
                 rect.move_ip(0, 20)
-
     screen.fill((0, 0, 0))
     Create_rooms(rooms, screen).create()
-    pygame.draw.rect(screen, (255, 0, 0), rect, 0)
+    player.create_player()
     pygame.display.flip()
     clock.tick(60)
+
 
 pygame.quit()
