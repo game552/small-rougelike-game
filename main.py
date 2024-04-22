@@ -2,16 +2,32 @@ import random
 import pygame
 from pygame.locals import QUIT
 
-# Adjust dimensions for the rooms to fit within the screen
 ROOM_WIDTH = 300
 ROOM_HEIGHT = 200
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
 
-rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
-         [random.randint(0, 1), 1, 1, 1],
+rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
+         [1, 1, 1, random.randint(0, 1)],
          [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]
          ]
+
+
+class Player:
+    def __init__(self, x1_size, y1_size, x2_size, y2_size, screen):
+        self.screen = screen
+        self.player = pygame.Rect(x1_size, y1_size, x2_size, y2_size)
+        self.x = self
+
+
+    def create_player(self):
+        pygame.draw.rect(self.screen, (255, 0, 0), self.player, 0)
+
+    def get_player(self):
+        return self.player
+
+    def move_ip(self, param, param1):
+        self.player.move_ip(param, param1)
 
 
 class Create_rooms:
@@ -30,7 +46,7 @@ class Create_rooms:
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
-rect = pygame.Rect(40, 40, 12, 12)
+rect = pygame.Rect(580, 290, 10, 10)
 
 running = True
 while running:
@@ -38,28 +54,27 @@ while running:
         if event.type == QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                rect.move_ip(-40, 0)
-            elif event.key == pygame.K_RIGHT:
-                rect.move_ip(40, 0)
-            elif event.key == pygame.K_UP:
-                rect.move_ip(0, -40)
-            elif event.key == pygame.K_DOWN:
-                rect.move_ip(0, 40)
-            elif event.key == pygame.K_a:
-                rect.move_ip(-40, 0)
-            elif event.key == pygame.K_d:
-                rect.move_ip(40, 0)
-            elif event.key == pygame.K_w:
-                rect.move_ip(0, -40)
-            elif event.key == pygame.K_s:
-                rect.move_ip(0, 40)
+            if event.key == pygame.K_LEFT and rect.x - 20 >= 0 and rect.contains(rect):
+                rect.move_ip(-20, 0)
+            elif event.key == pygame.K_RIGHT and rect.x + 20 < SCREEN_WIDTH:
+                rect.move_ip(20, 0)
+            elif event.key == pygame.K_UP and rect.y - 20 >= 0:
+                rect.move_ip(0, -20)
+            elif event.key == pygame.K_DOWN and rect.y + 20 < SCREEN_HEIGHT:
+                rect.move_ip(0, 20)
+            elif event.key == pygame.K_a and rect.x - 20 >= 0:
+                rect.move_ip(-20, 0)
+            elif event.key == pygame.K_d and rect.x + 20 < SCREEN_WIDTH:
+                rect.move_ip(20, 0)
+            elif event.key == pygame.K_w and rect.y - 20 >= 0:
+                rect.move_ip(0, -20)
+            elif event.key == pygame.K_s and rect.y + 20 < SCREEN_HEIGHT:
+                rect.move_ip(0, 20)
 
-    screen.fill((0, 0, 0))  # Fill the screen with black before drawing anything
+    screen.fill((0, 0, 0))
     Create_rooms(rooms, screen).create()
     pygame.draw.rect(screen, (255, 0, 0), rect, 0)
-    pygame.display.flip()  # Update the display to show changes
-    clock.tick(24)
+    pygame.display.flip()
+    clock.tick(60)
 
 pygame.quit()
-print(rooms)
