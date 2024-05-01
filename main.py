@@ -12,7 +12,7 @@ rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
          [1, 1, 1, 1],
          [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]
          ]
-rooms_test = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
+
 
 
 class Player:
@@ -39,15 +39,32 @@ class Create_rooms(Wall):
         self.rooms = rooms
 
     def create(self):
-        s = 200
+        # Initial positions
+        y_top = 0
+        y_bottom = 200
+        x_left = 0
+        x_right = 200
+
+
         for y, level in enumerate(self.rooms):
             for x, room in enumerate(level):
                 if room:
+                    # Draw top wall
                     pygame.draw.rect(self.screen, (145, 255, 255),
-                                     (x * WALL_WIDTH, s, WALL_WIDTH, 15), 0)
-                    pygame.draw.rect(self.screen, (255, 255, 255),
+                                     (x * WALL_WIDTH, y_top, WALL_WIDTH, 15), 0)
+                    # Draw bottom wall
+                    pygame.draw.rect(self.screen, (145, 255, 255),
+                                     (x * WALL_WIDTH, y_bottom, WALL_WIDTH, 15), 0)
+                    # Draw left wall
+                    pygame.draw.rect(self.screen, (255, 0, 255),
                                      (x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)
-            s += 200
+                    # Draw right wall
+                    pygame.draw.rect(self.screen, (255, 0, 0),
+                                     (x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)
+            # Update positions for next row of rooms
+            y_top += 200
+            y_bottom += 200
+            x_left += 300
 
 
 pygame.init()
