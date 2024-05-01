@@ -2,16 +2,17 @@ import random
 import pygame
 from pygame.locals import QUIT
 
-ROOM_WIDTH = 300
-ROOM_HEIGHT = 200
+WALL_WIDTH = 300
+WALL_HEIGHT = 200
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
 speed = 5
 
 rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
-         [1, 1, 1, random.randint(0, 1)],
+         [1, 1, 1, 1],
          [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]
          ]
+rooms_test = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
 
 
 class Player:
@@ -29,20 +30,24 @@ class Player:
 
 class Wall:
     def __init__(self, screen):
-        pass
-
-
-class Create_rooms:
-    def __init__(self, rooms, screen):
-        self.rooms = rooms
         self.screen = screen
 
+
+class Create_rooms(Wall):
+    def __init__(self, rooms, screen):
+        super().__init__(screen)
+        self.rooms = rooms
+
     def create(self):
+        s = 200
         for y, level in enumerate(self.rooms):
             for x, room in enumerate(level):
                 if room:
+                    pygame.draw.rect(self.screen, (145, 255, 255),
+                                     (x * WALL_WIDTH, s, WALL_WIDTH, 15), 0)
                     pygame.draw.rect(self.screen, (255, 255, 255),
-                                     (x * ROOM_WIDTH, y * ROOM_HEIGHT, ROOM_WIDTH, ROOM_HEIGHT), 1)
+                                     (x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)
+            s += 200
 
 
 pygame.init()
@@ -69,7 +74,6 @@ while not done:
     if keys[pygame.K_w]:
         rect.y -= speed
 
-    # Boundary checking to keep the rectangle within the screen
     rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
     rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
 
