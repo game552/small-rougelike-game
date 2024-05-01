@@ -7,12 +7,12 @@ WALL_HEIGHT = 200
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
 speed = 5
+rect_list = []
 
 rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
          [1, 1, 1, 1],
          [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]
          ]
-
 
 
 class Player:
@@ -36,15 +36,13 @@ class Wall:
 class Create_rooms(Wall):
     def __init__(self, rooms, screen):
         super().__init__(screen)
+        self.rect_list = []
         self.rooms = rooms
 
     def create(self):
-        # Initial positions
         y_top = 0
         y_bottom = 200
         x_left = 0
-        x_right = 200
-
 
         for y, level in enumerate(self.rooms):
             for x, room in enumerate(level):
@@ -61,6 +59,19 @@ class Create_rooms(Wall):
                     # Draw right wall
                     pygame.draw.rect(self.screen, (255, 0, 0),
                                      (x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)
+
+                    room_rect = pygame.Rect(x * WALL_WIDTH, y * WALL_HEIGHT, WALL_WIDTH, WALL_HEIGHT)
+                    self.rect_list.append(room_rect)
+
+                    if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
+                        pygame.draw.rect(self.screen, (0, 255, 0),
+                                         (x * WALL_WIDTH + WALL_WIDTH - 15, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 5, 15,
+                                          10), 0)
+                    if y < len(self.rooms) - 1 and self.rooms[y + 1][x]:
+                        pygame.draw.rect(self.screen, (0, 255, 0),
+                                         (x * WALL_WIDTH + WALL_WIDTH // 2 - 5, y * WALL_HEIGHT + WALL_HEIGHT - 15, 10,
+                                          15), 0)
+
             # Update positions for next row of rooms
             y_top += 200
             y_bottom += 200
@@ -82,7 +93,7 @@ while not done:
 
     screen.fill((0, 0, 0))
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_a]:
+    if keys[pygame.K_a] and rect.collidelistall():
         rect.x -= speed
     if keys[pygame.K_d]:
         rect.x += speed
