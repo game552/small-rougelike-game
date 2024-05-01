@@ -7,7 +7,6 @@ WALL_HEIGHT = 200
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
 speed = 5
-rect_list = []
 
 rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
          [1, 1, 1, 1],
@@ -50,18 +49,24 @@ class Create_rooms(Wall):
                     # Draw top wall
                     pygame.draw.rect(self.screen, (145, 255, 255),
                                      (x * WALL_WIDTH, y_top, WALL_WIDTH, 15), 0)
+                    top_wall = pygame.Rect(x * WALL_WIDTH, y_top, WALL_WIDTH, 15)
                     # Draw bottom wall
                     pygame.draw.rect(self.screen, (145, 255, 255),
                                      (x * WALL_WIDTH, y_bottom, WALL_WIDTH, 15), 0)
+                    bottom_wall = pygame.Rect(x * WALL_WIDTH, y_bottom, WALL_WIDTH, 15)
                     # Draw left wall
                     pygame.draw.rect(self.screen, (255, 0, 255),
                                      (x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)
+                    left_wall = pygame.Rect(x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT)
                     # Draw right wall
                     pygame.draw.rect(self.screen, (255, 0, 0),
                                      (x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)
+                    right_wall = pygame.Rect(x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT)
 
-                    room_rect = pygame.Rect(x * WALL_WIDTH, y * WALL_HEIGHT, WALL_WIDTH, WALL_HEIGHT)
-                    self.rect_list.append(room_rect)
+                    self.rect_list.append(bottom_wall)
+                    self.rect_list.append(left_wall)
+                    self.rect_list.append(right_wall)
+                    self.rect_list.append(top_wall)
 
                     if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
                         pygame.draw.rect(self.screen, (0, 255, 0),
@@ -77,6 +82,9 @@ class Create_rooms(Wall):
             y_bottom += 200
             x_left += 300
 
+    def get_rect_list(self):
+        return self.rect_list
+
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -90,22 +98,27 @@ while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
-
+    level = Create_rooms(rooms, screen)
+    level.create()
+    rect_list = level.get_rect_list()
     screen.fill((0, 0, 0))
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_a] and rect.collidelistall():
+    if keys[pygame.K_a] and not rect.collidelistall(rect_list):
         rect.x -= speed
-    if keys[pygame.K_d]:
+    elif keys[pygame.K_d] and not rect.collidelistall(rect_list):
         rect.x += speed
-    if keys[pygame.K_s]:
+    elif keys[pygame.K_s] and not rect.collidelistall(rect_list):
         rect.y += speed
-    if keys[pygame.K_w]:
+    elif keys[pygame.K_w] and not rect.collidelistall(rect_list):
         rect.y -= speed
+    if rect.collidelistall(rect_list):
+        rect.x -= 1
+        rect.y -= 1
 
     rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
     rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
 
-    Create_rooms(rooms, screen).create()
+    level.create()
     player.create_player()
     screen.blit(telega, rect)
     pygame.display.flip()
