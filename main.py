@@ -6,7 +6,7 @@ WALL_WIDTH = 300
 WALL_HEIGHT = 200
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
-speed = 4
+speed = 3
 
 rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
          [1, 1, 1, 1],
@@ -38,7 +38,7 @@ class Create_rooms(Wall):
         self.rect_list = []
         self.rooms = rooms
 
-    def create(self):
+    def create_rooms(self):
         y_top = 0
         y_bottom = 200
         x_left = 0
@@ -98,38 +98,28 @@ while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
+
     level = Create_rooms(rooms, screen)
-    level.create()
+    level.create_rooms()
     rect_list = level.get_rect_list()
+
     screen.fill((0, 0, 0))
+
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
-        if rect.collidelistall(rect_list):
-            rect.x += 10
-        else:
-            rect.x -= speed
+        rect.x -= speed if not rect.collidelistall(rect_list) else -10
     elif keys[pygame.K_d]:
-        if rect.collidelistall(rect_list):
-            rect.x -= 10
-        else:
-            rect.x += speed
+        rect.x += speed if not rect.collidelistall(rect_list) else -10
     elif keys[pygame.K_s]:
-        if rect.collidelistall(rect_list):
-            rect.y -= 10
-        else:
-            rect.y += speed
+        rect.y += speed if not rect.collidelistall(rect_list) else -10
     elif keys[pygame.K_w]:
-        if rect.collidelistall(rect_list):
-            rect.y += 10
-        else:
-            rect.y -= speed
+        rect.y -= speed if not rect.collidelistall(rect_list) else -10
 
     rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
     rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
 
-    level.create()
-    player.create_player()
-    screen.blit(telega, rect)
+    level.create_rooms()
+    pygame.draw.rect(screen, (255, 0, 0), rect)
     pygame.display.flip()
     clock.tick(60)
 
