@@ -78,19 +78,19 @@ class Create_rooms(Wall):
             for x, room in enumerate(level):
                 if room:
                     if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
-                        pygame.draw.rect(self.screen, (0, 255, 0),
-                                         (x * WALL_WIDTH + WALL_WIDTH - 15, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 5, 45,
+                        pygame.draw.rect(self.screen, (0, 40, 0),
+                                         (x * WALL_WIDTH + WALL_WIDTH - 3.1, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15, 22,
                                           50), 0)
                         self.doors.append(
-                            pygame.Rect(x * WALL_WIDTH + WALL_WIDTH - 15, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 5, 45,
+                            pygame.Rect(x * WALL_WIDTH + WALL_WIDTH - 2, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 5, 22,
                                         50))
                     if y < len(self.rooms) - 1 and self.rooms[y + 1][x]:
                         pygame.draw.rect(self.screen, (0, 255, 0),
-                                         (x * WALL_WIDTH + WALL_WIDTH // 2 - 5, y * WALL_HEIGHT + WALL_HEIGHT - 15, 45,
-                                          50), 0)
+                                         (x * WALL_WIDTH + WALL_WIDTH // 2 - 15, y * WALL_HEIGHT + WALL_HEIGHT - 5, 45,
+                                          22), 0)
                         self.doors.append(
-                            pygame.Rect(x * WALL_WIDTH + WALL_WIDTH // 2 - 5, y * WALL_HEIGHT + WALL_HEIGHT - 15, 45,
-                                        50))
+                            pygame.Rect(x * WALL_WIDTH + WALL_WIDTH // 2 - 15, y * WALL_HEIGHT + WALL_HEIGHT - 5, 45,
+                                        22))
 
     def get_rect_list(self):
         return self.rect_list
@@ -123,28 +123,28 @@ while not done:
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         if rect.collidelistall(door_list):
-            rect.x -= 35
+            rect.x -= 37
         elif not rect.collidelistall(rect_list):
             rect.x -= speed
         else:
             rect.x += 20
     elif keys[pygame.K_d]:
         if rect.collidelistall(door_list):
-            rect.x += 35
+            rect.x += 37
         elif not rect.collidelistall(rect_list):
             rect.x += speed
         else:
             rect.x -= 20
     elif keys[pygame.K_s]:
         if rect.collidelistall(door_list):
-            rect.y += 35
+            rect.y += 37
         elif not rect.collidelistall(rect_list):
             rect.y += speed
         else:
             rect.y -= 20
     elif keys[pygame.K_w]:
         if rect.collidelistall(door_list):
-            rect.y -= 35
+            rect.y -= 37
         elif not rect.collidelistall(rect_list):
             rect.y -= speed
         else:
