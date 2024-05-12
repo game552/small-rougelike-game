@@ -27,6 +27,15 @@ class Player:
         return self.player
 
 
+class Enemy:
+    def __init__(self, screen, y1, y2):
+        self.y_top = y1
+        self.y_bot = y2
+        self.screen = screen
+
+    def create_enemy(self):
+        pygame.draw.rect(self.screen, (255, 0, 0),(self.y_top, self.y_bot, 10, 10), 0)
+
 class Wall:
     def __init__(self, screen):
         self.screen = screen
@@ -38,6 +47,8 @@ class Create_rooms(Wall):
         self.rect_list = []
         self.rooms = rooms
         self.doors = []
+        self.rooms1 = []
+
 
     def create_rooms(self):
         y_top = 0
@@ -64,6 +75,7 @@ class Create_rooms(Wall):
                                      (x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)
                     right_wall = pygame.Rect(x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT)
 
+                    self.rooms1.append(pygame.Rect(x * WALL_WIDTH, y * WALL_HEIGHT, WALL_WIDTH, WALL_HEIGHT))
                     self.rect_list.append(bottom_wall)
                     self.rect_list.append(left_wall)
                     self.rect_list.append(right_wall)
@@ -79,8 +91,10 @@ class Create_rooms(Wall):
                 if room:
                     if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
                         pygame.draw.rect(self.screen, (0, 40, 0),
-                                         (x * WALL_WIDTH + WALL_WIDTH - 3.1, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15, 22,
-                                          50), 0)
+                                         (
+                                             x * WALL_WIDTH + WALL_WIDTH - 3.1, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
+                                             22,
+                                             50), 0)
                         self.doors.append(
                             pygame.Rect(x * WALL_WIDTH + WALL_WIDTH - 2, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 5, 22,
                                         50))
@@ -95,8 +109,12 @@ class Create_rooms(Wall):
     def get_rect_list(self):
         return self.rect_list
 
+    def get_rooms(self):
+        return self.rooms1
+
     def get_door_list(self):
         return self.doors
+
 
 
 pygame.init()
@@ -117,7 +135,10 @@ while not done:
     level.create_doors()
     rect_list = level.get_rect_list()
     door_list = level.get_door_list()
-
+    rooms_list = level.get_rooms()
+    for i in rooms_list:
+        center = i.center
+        Enemy(screen, center[0], center[1]).create_enemy()
     screen.fill((0, 0, 0))
 
     keys = pygame.key.get_pressed()
@@ -153,6 +174,9 @@ while not done:
     rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
     rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
 
+    for i in rooms_list:
+        center = i.center
+        Enemy(screen, center[0] + random.randint(0, 40), center[1] + random.randint(0, 40)).create_enemy()
     level.create_rooms()
     level.create_doors()
     player.create_player()
