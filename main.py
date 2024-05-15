@@ -1,12 +1,13 @@
 import random
 import pygame
+from heapq import *
 from pygame.locals import QUIT
 
 WALL_WIDTH = 300
 WALL_HEIGHT = 200
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
-speed = 3
+speed = 5
 
 rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
          [1, 1, 1, 1],
@@ -28,13 +29,33 @@ class Player:
 
 
 class Enemy:
-    def __init__(self, screen, y1, y2):
+    def __init__(self, screen, y1, y2, speed):
         self.y_top = y1
+        self.speed = speed
         self.y_bot = y2
         self.screen = screen
+        self.rect = pygame.Rect(self.y_top, self.y_bot, 10, 10)
 
     def create_enemy(self):
-        pygame.draw.rect(self.screen, (255, 0, 0),(self.y_top, self.y_bot, 10, 10), 0)
+        pygame.draw.rect(self.screen, (255, 0, 0), (self.y_top, self.y_bot, 10, 10), 0)
+
+    def enemy_moving(self, player_dist_x, player_dist_y):
+        dist_x = self.rect.x - player_dist_x
+        dist_y = self.rect.y - player_dist_y
+        if dist_x > 0 and dist_y > 0:
+            self.rect.x -= self.speed
+            self.rect.y -= self.speed
+        elif dist_x > 0 > dist_y:
+            self.rect.x -= self.speed
+            self.rect.y += self.speed
+        elif dist_x < 0 < dist_y:
+            self.rect.x += self.speed
+            self.rect.y -= self.speed
+        elif dist_x < 0 and dist_y < 0:
+            self.rect.x += self.speed
+            self.rect.y += self.speed
+        print(dist_x, dist_y)
+
 
 class Wall:
     def __init__(self, screen):
@@ -48,7 +69,6 @@ class Create_rooms(Wall):
         self.rooms = rooms
         self.doors = []
         self.rooms1 = []
-
 
     def create_rooms(self):
         y_top = 0
@@ -93,8 +113,7 @@ class Create_rooms(Wall):
                         pygame.draw.rect(self.screen, (0, 40, 0),
                                          (
                                              x * WALL_WIDTH + WALL_WIDTH - 3.1, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
-                                             22,
-                                             50), 0)
+                                             22, 50), 0)
                         self.doors.append(
                             pygame.Rect(x * WALL_WIDTH + WALL_WIDTH - 2, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 5, 22,
                                         50))
@@ -116,13 +135,14 @@ class Create_rooms(Wall):
         return self.doors
 
 
-
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 telega = pygame.image.load('priest1_v1_1.png').convert_alpha()
 clock = pygame.time.Clock()
 player = Player(560, 290, 10, 10, screen)
 rect = player.get_player()
+enemy_list = []
+enemy_dict = {}
 
 done = False
 while not done:
@@ -136,9 +156,7 @@ while not done:
     rect_list = level.get_rect_list()
     door_list = level.get_door_list()
     rooms_list = level.get_rooms()
-    for i in rooms_list:
-        center = i.center
-        Enemy(screen, center[0], center[1]).create_enemy()
+
     screen.fill((0, 0, 0))
 
     keys = pygame.key.get_pressed()
@@ -174,14 +192,25 @@ while not done:
     rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
     rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
 
-    for i in rooms_list:
-        center = i.center
-        Enemy(screen, center[0] + random.randint(0, 40), center[1] + random.randint(0, 40)).create_enemy()
+    for i in range(len(rooms_list)):
+        if len(rooms_list) > len(enemy_list):
+            center = rooms_list[i].center
+            enemy = Enemy(screen, center[0] + random.randint(0, 60), center[1] + random.randint(0, 60), 1)
+            enemy.create_enemy()
+            enemy_dict[i] = enemy
+            enemy_list.append((center[0] + random.randint(0, 60), center[1] + random.randint(0, 60)))
+        else:
+            Enemy(screen, enemy_list[i][0], enemy_list[i][1], 1).create_enemy()
+
+    for i in range(10):
+        enemy_dict[0].enemy_moving(rect.x, rect.y)
+        enemy_dict[0].create_enemy()
+
     level.create_rooms()
     level.create_doors()
     player.create_player()
     screen.blit(telega, rect)
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(24)
 
 pygame.quit()
