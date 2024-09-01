@@ -1,12 +1,11 @@
 import random
 import pygame
-from heapq import *
-from pygame.locals import QUIT
 
-WALL_WIDTH = 300
-WALL_HEIGHT = 200
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
+WALL_WIDTH = SCREEN_WIDTH / 4
+WALL_HEIGHT = SCREEN_HEIGHT / 3
+
 speed = 5
 
 rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
@@ -19,13 +18,31 @@ class Player:
     def __init__(self, x1_size, y1_size, x2_size, y2_size, screen):
         self.screen = screen
         self.player = pygame.Rect(x1_size, y1_size, x2_size, y2_size)
-        self.x = self
+        self.x = self.player.x
+        self.y = self.player.y
 
     def create_player(self):
         pygame.draw.rect(self.screen, (0, 0, 0), self.player, 0)
 
     def get_player(self):
         return self.player
+
+    @staticmethod
+    def possibility_of_movement(directory_of_movement, rect_list, cord, rect_list2):
+        if directory_of_movement == 'right':
+            tester = pygame.Rect(cord[0] + 10, cord[1], 10, 10)
+        elif directory_of_movement == 'left':
+            tester = pygame.Rect(cord[0] - speed, cord[1], 10, 10)
+        elif directory_of_movement == 'up':
+            tester = pygame.Rect(cord[0], cord[1] - speed, 10, 10)
+        else:
+            tester = pygame.Rect(cord[0], cord[1] + 10, 10, 10)
+        if tester.collidelistall(door_list):
+            return True
+        elif tester.collidelistall(rect_list):
+            return False
+        else:
+            return True
 
 
 class Enemy:
@@ -54,7 +71,6 @@ class Enemy:
         elif dist_x < 0 and dist_y < 0:
             self.rect.x += self.speed
             self.rect.y += self.speed
-        print(dist_x, dist_y)
 
 
 class Wall:
@@ -156,38 +172,27 @@ while not done:
     rect_list = level.get_rect_list()
     door_list = level.get_door_list()
     rooms_list = level.get_rooms()
+    cord = (rect.topleft[0], rect.topleft[1], rect.bottomright[0], rect.bottomright[1])
 
     screen.fill((0, 0, 0))
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_a]:
-        if rect.collidelistall(door_list):
-            rect.x -= 37
-        elif not rect.collidelistall(rect_list):
-            rect.x -= speed
-        else:
-            rect.x += 20
-    elif keys[pygame.K_d]:
-        if rect.collidelistall(door_list):
-            rect.x += 37
-        elif not rect.collidelistall(rect_list):
-            rect.x += speed
-        else:
-            rect.x -= 20
-    elif keys[pygame.K_s]:
-        if rect.collidelistall(door_list):
-            rect.y += 37
-        elif not rect.collidelistall(rect_list):
-            rect.y += speed
-        else:
-            rect.y -= 20
-    elif keys[pygame.K_w]:
-        if rect.collidelistall(door_list):
-            rect.y -= 37
-        elif not rect.collidelistall(rect_list):
-            rect.y -= speed
-        else:
-            rect.y += 20
+
+    # if rect.collidelistall(door_list):
+    #     rect.x += 37
+    if keys[pygame.K_a] and player.possibility_of_movement("left", rect_list, (rect.x, rect.y), door_list):
+        rect.x -= speed
+
+    elif keys[pygame.K_d] and player.possibility_of_movement("right", rect_list, (rect.x, rect.y), door_list):
+        rect.x += speed
+
+    # if rect.collidelistall(door_list):
+    #     rect.y += 37
+    elif keys[pygame.K_s] and player.possibility_of_movement("down", rect_list, (rect.x, rect.y), door_list):
+        rect.y += speed
+
+    elif keys[pygame.K_w] and player.possibility_of_movement("up", rect_list, (rect.x, rect.y), door_list):
+        rect.y -= speed
 
     rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
     rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
