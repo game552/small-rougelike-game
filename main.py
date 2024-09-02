@@ -37,12 +37,15 @@ class Player:
             tester = pygame.Rect(cord[0], cord[1] - speed, 10, 10)
         else:
             tester = pygame.Rect(cord[0], cord[1] + 10, 10, 10)
-        if tester.collidelistall(door_list):
-            return True
+        if tester.collidelistall(rect_list2):
+            del tester
+            return True, True
         elif tester.collidelistall(rect_list):
-            return False
+            del tester
+            return False, False
         else:
-            return True
+            del tester
+            return False, True
 
 
 class Enemy:
@@ -128,10 +131,10 @@ class Create_rooms(Wall):
                     if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
                         pygame.draw.rect(self.screen, (0, 40, 0),
                                          (
-                                             x * WALL_WIDTH + WALL_WIDTH - 3.1, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
+                                             x * WALL_WIDTH + WALL_WIDTH - 3, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
                                              22, 50), 0)
                         self.doors.append(
-                            pygame.Rect(x * WALL_WIDTH + WALL_WIDTH - 2, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 5, 22,
+                            pygame.Rect(x * WALL_WIDTH + WALL_WIDTH - 2, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15, 22,
                                         50))
                     if y < len(self.rooms) - 1 and self.rooms[y + 1][x]:
                         pygame.draw.rect(self.screen, (0, 255, 0),
@@ -178,24 +181,32 @@ while not done:
 
     keys = pygame.key.get_pressed()
 
-    # if rect.collidelistall(door_list):
-    #     rect.x += 37
-    if keys[pygame.K_a] and player.possibility_of_movement("left", rect_list, (rect.x, rect.y), door_list):
-        rect.x -= speed
+    if keys[pygame.K_a] and player.possibility_of_movement("left", rect_list, (rect.x, rect.y), door_list)[1]:
+        if player.possibility_of_movement("left", rect_list, (rect.x, rect.y), door_list)[0]:
+            rect.x -= 40
+        else:
+            rect.x -= speed
 
-    elif keys[pygame.K_d] and player.possibility_of_movement("right", rect_list, (rect.x, rect.y), door_list):
-        rect.x += speed
+    if keys[pygame.K_d] and player.possibility_of_movement("right", rect_list, (rect.x, rect.y), door_list)[1]:
+        if player.possibility_of_movement("right", rect_list, (rect.x, rect.y), door_list)[0]:
+            rect.x += 40
+        else:
+            rect.x += speed
 
-    # if rect.collidelistall(door_list):
-    #     rect.y += 37
-    elif keys[pygame.K_s] and player.possibility_of_movement("down", rect_list, (rect.x, rect.y), door_list):
-        rect.y += speed
+    if keys[pygame.K_s] and player.possibility_of_movement("down", rect_list, (rect.x, rect.y), door_list)[1]:
+        if player.possibility_of_movement("down", rect_list, (rect.x, rect.y), door_list)[0]:
+            rect.y += 40
+        else:
+            rect.y += speed
 
-    elif keys[pygame.K_w] and player.possibility_of_movement("up", rect_list, (rect.x, rect.y), door_list):
-        rect.y -= speed
+    if keys[pygame.K_w] and player.possibility_of_movement("up", rect_list, (rect.x, rect.y), door_list)[1]:
+        if player.possibility_of_movement("up", rect_list, (rect.x, rect.y), door_list)[0]:
+            rect.y -= 40
+        else:
+            rect.y -= speed
 
-    rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
-    rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
+    # rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
+    # rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
 
     for i in range(len(rooms_list)):
         if len(rooms_list) > len(enemy_list):
@@ -216,6 +227,6 @@ while not done:
     player.create_player()
     screen.blit(telega, rect)
     pygame.display.flip()
-    clock.tick(24)
+    clock.tick(48)
 
 pygame.quit()
