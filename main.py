@@ -125,6 +125,7 @@ class Create_rooms(Wall):
             x_left += 300
 
     def create_doors(self):
+
         for y, level in enumerate(self.rooms):
             for x, room in enumerate(level):
                 if room:
