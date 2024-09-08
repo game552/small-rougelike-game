@@ -1,5 +1,6 @@
 import random
 import pygame
+from test_2 import *
 
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
@@ -55,25 +56,16 @@ class Enemy:
         self.y_bot = y2
         self.screen = screen
         self.rect = pygame.Rect(self.y_top, self.y_bot, 10, 10)
+        self.x = self.rect.x
+        self.y = self.rect.y
 
     def create_enemy(self):
         pygame.draw.rect(self.screen, (255, 0, 0), (self.y_top, self.y_bot, 10, 10), 0)
 
-    def enemy_moving(self, player_dist_x, player_dist_y):
-        dist_x = self.rect.x - player_dist_x
-        dist_y = self.rect.y - player_dist_y
-        if dist_x > 0 and dist_y > 0:
-            self.rect.x -= self.speed
-            self.rect.y -= self.speed
-        elif dist_x > 0 > dist_y:
-            self.rect.x -= self.speed
-            self.rect.y += self.speed
-        elif dist_x < 0 < dist_y:
-            self.rect.x += self.speed
-            self.rect.y -= self.speed
-        elif dist_x < 0 and dist_y < 0:
-            self.rect.x += self.speed
-            self.rect.y += self.speed
+    def move(self, x, y):
+        self.x = x
+        self.y = y
+        self.create_enemy()
 
 
 class Wall:
@@ -209,19 +201,21 @@ while not done:
     # rect.x = max(0, min(rect.x, SCREEN_WIDTH - rect.width))
     # rect.y = max(0, min(rect.y, SCREEN_HEIGHT - rect.height))
 
-    for i in range(len(rooms_list)):
-        if len(rooms_list) > len(enemy_list):
-            center = rooms_list[i].center
-            enemy = Enemy(screen, center[0] + random.randint(0, 60), center[1] + random.randint(0, 60), 1)
-            enemy.create_enemy()
-            enemy_dict[i] = enemy
-            enemy_list.append((center[0] + random.randint(0, 60), center[1] + random.randint(0, 60)))
-        else:
-            Enemy(screen, enemy_list[i][0], enemy_list[i][1], 1).create_enemy()
+    # for i in range(len(rooms_list)):
+    #     if len(rooms_list) > len(enemy_list):
+    #         center = rooms_list[i].center
+    #         enemy = Enemy(screen, center[0], center[1], 1)
+    #         enemy.create_enemy()
+    #         enemy_dict[i] = enemy
+    #         enemy_list.append((center[0], center[1]))
+    #         grid = GridWithWeights(270, 170)
+    #         came_from, cost_so_far = a_star_search(grid, (enemy.x, enemy.y), (rect.x, rect.y))
+    #         for x, y in reconstruct_path(came_from, (enemy.x, enemy.y), (rect.x, rect.y)):
+    #             Enemy.move(x, y)
+    #     else:
+    #         Enemy(screen, enemy_list[i][0], enemy_list[i][1], 1).create_enemy()
 
-    for i in range(10):
-        enemy_dict[0].enemy_moving(rect.x, rect.y)
-        enemy_dict[0].create_enemy()
+
 
     level.create_rooms()
     level.create_doors()
