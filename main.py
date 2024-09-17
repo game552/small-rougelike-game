@@ -1,6 +1,10 @@
 import pygame
 import random
 
+import sys
+
+sys.setrecursionlimit(3000)
+
 # --- Константы ---
 
 SCREEN_WIDTH = 1200
@@ -8,15 +12,92 @@ SCREEN_HEIGHT = 600
 WALL_WIDTH = SCREEN_WIDTH // 4
 WALL_HEIGHT = SCREEN_HEIGHT // 3
 PLAYER_SIZE = 10
-PLAYER_COLOR = (0, 0, 0)  # Черный
+PLAYER_COLOR = (0, 0, 0)
 SPEED = 5
+
+
+# --- Функции ---
+
+def get_line_equation(p1, p2):
+    """Возвращает уравнение прямой, проходящей через две точки."""
+    x1, y1 = p1
+    x2, y2 = p2
+    if x1 == x2:
+        return 0, x1  # Вертикальная линия
+    else:
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - slope * x1
+        return slope, intercept
+
+
+def get_point_on_line_x(slope, intercept, x):
+    """Возвращает точку на прямой с заданным x."""
+    if slope == 0:
+        return x, intercept  # Вертикальная линия
+    else:
+        return x, slope * x + intercept
+
+
+def get_point_on_line_y(k: float, l: float, y: float) -> tuple:
+    """Возвращает точку на прямой с заданным y"""
+    if k == 0:
+        return l, y  # Вертикальная линия
+    else:
+        if k != 0:
+            return (y - l) / k, y  # Вычисляем x через уравнение прямой
+        else:
+            return 0, 0
+
+
+def create_line_points_x(start_x: int, start_y: int, end_x: int, end_y: int, step_size=10) -> list:
+    """возвращает точки прямой по оси x"""
+    points = [(start_x, start_y)]
+    k, l = get_line_equation((start_x, start_y), (end_x, end_y))
+    if start_x < end_x:
+        x = start_x + step_size
+    else:
+        x = start_x - step_size
+    x, y = get_point_on_line_x(k, l, x)
+    points.append((x, y))
+    while abs(x) < SCREEN_WIDTH and abs(y) < SCREEN_HEIGHT:
+        if start_x < end_x:
+            x += step_size
+        else:
+            x -= step_size
+        x, y = get_point_on_line_x(k, l, x)
+
+        points.append((x, y))
+
+    return points
+
+
+def create_line_points_y(start_x: int, start_y: int, end_x: int, end_y: int, step_size=10) -> list:
+    """возвращает точки прямой о оси y"""
+    points = [(start_x, start_y)]
+    k, l = get_line_equation((start_x, start_y), (end_x, end_y))
+    if start_y < end_y:
+        y = start_y + step_size
+    else:
+        y = start_y - step_size
+    x, y = get_point_on_line_y(k, l, y)
+    points.append((x, y))
+    while abs(x) < SCREEN_WIDTH and abs(y) < SCREEN_HEIGHT:
+        if start_y < end_y:
+            y += step_size
+        else:
+            y -= step_size
+        x, y = get_point_on_line_y(k, l, y)
+        points.append((x, y))
+    return points
 
 
 # --- Классы ---
 
-class Player:
-    def __init__(self, x, y, screen):
-        self.screen = screen
+class Player(pygame.sprite.Sprite):
+    def __init__(self, x, y, screen_player, filename):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(filename).convert_alpha()
+        self.screen = screen_player
         self.rect = pygame.Rect(x, y, PLAYER_SIZE, PLAYER_SIZE)
         self.x = self.rect.x
         self.y = self.rect.y
@@ -47,10 +128,16 @@ class Player:
             del tester
             return False, True
 
+    def shoot(self, pos: tuple[int, int], wall_list3, enemy_list3):
+        bullet: Bullet = Bullet(self.rect.centerx, self.rect.centery, pos)
+        bullet.create(wall_list3, enemy_list3)
 
-class Enemy:
-    def __init__(self, screen, x, y, speed):
-        self.screen = screen
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, screen_enemy, x, y, speed, filename):
+        pygame.sprite.Sprite.__init__(self)
+        self.screen = screen_enemy
+        self.image = pygame.image.load(filename).convert_alpha()
         self.rect = pygame.Rect(x, y, PLAYER_SIZE, PLAYER_SIZE)
         self.speed = speed
 
@@ -77,10 +164,14 @@ class Enemy:
             del tester
             return True
 
+    def death(self):
+        self.kill()
+
     def move(self, target_x, target_y, current_room_player, is_in_room=True):
         """Перемещает врага в сторону цели."""
         if is_in_room and current_room_player == self.get_current_room(rooms_list):
-            if target_x > self.rect.x and self.possibility_of_movement('right', player_rect, (self.rect.x, self.rect.y)):
+            if target_x > self.rect.x and self.possibility_of_movement('right', player_rect,
+                                                                       (self.rect.x, self.rect.y)):
                 self.rect.x += self.speed
             if target_x < self.rect.x and self.possibility_of_movement('left', player_rect, (self.rect.x, self.rect.y)):
                 self.rect.x -= self.speed
@@ -88,7 +179,7 @@ class Enemy:
                 self.rect.y += self.speed
             if target_y < self.rect.y and self.possibility_of_movement('up', player_rect, (self.rect.x, self.rect.y)):
                 self.rect.y -= self.speed
-        self.create_enemy()
+
 
 
 class Wall:
@@ -166,33 +257,66 @@ class CreateRooms(Wall):
         return self.doors
 
 
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y, target: tuple[int, int]):
+        pygame.sprite.Sprite.__init__(self)
+        self.x_target = target[0]
+        self.y_target = target[1]
+        self.image = pygame.Surface((2, 2))
+        self.image.fill((255, 255, 255))
+        self.x = x
+        self.y = y
+        self.rect = pygame.Rect(x, y, 5, 5)
+        self.room = self.rect.collidelistall(rooms_list)
+        self.speedy = 10
+        bullet_list.append(self)
+
+    def create(self, wall_list2: list, enemy_list2: list):
+        pygame.draw.rect(screen, (255, 0, 0), self.rect, 0)
+        self.update(wall_list2, enemy_list2)
+
+    def update(self, wall_list2: list, enemy_list2: list):
+        line = create_line_points_x(self.x, self.y, self.x_target, self.y_target)
+        line2 = create_line_points_y(self.x, self.y, self.x_target, self.y_target)
+        line.extend(j for j in line2 if j not in line)
+        for re in line:
+            rect = pygame.Rect(re[0], re[1], 5, 5)
+            if rect.collidelistall(rooms_list) == self.room:
+                if rect.collidelistall(enemy_list2):
+                    enemy_list.remove(enemy_list2[rect.collidelistall(enemy_list2)[0]])
+                    self.kill()
+                    return
+                else:
+                    pygame.draw.rect(screen, (255, 0, 0), rect, 4)
+
+
 # --- Инициализация игры ---
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-telega = pygame.image.load('priest1_v1_1.png').convert_alpha()
+
 clock = pygame.time.Clock()
 
 # --- Генерация комнат ---
 
-rooms = [[1, random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
+rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
          [1, 1, 1, 1],
          [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
 
 # --- Создание игрока и врагов ---
 
-player = Player(560, 290, screen)
+player = Player(560, 290, screen, 'priest1_v1_1.png')
 player_rect = player.get_rect()
+bullet_list = []
 enemy_list = []
+ennemy_list = []
+dead_list = []
 enemy_dict = {}
 
 # --- Основной игровой цикл ---
 
 done = False
 while not done:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
 
     # Создание комнат и дверей
     level = CreateRooms(rooms, screen)
@@ -207,6 +331,7 @@ while not done:
 
     # Обработка нажатий клавиш
     keys = pygame.key.get_pressed()
+
     if keys[pygame.K_a] and \
             player.possibility_of_movement("left", rect_list, (player.rect.x, player.rect.y), door_list)[1]:
         if player.possibility_of_movement("left", rect_list, (player.rect.x, player.rect.y), door_list)[0]:
@@ -237,21 +362,33 @@ while not done:
 
     # Движение врагов
     for i in range(len(rooms_list)):
-        if len(rooms_list) > len(enemy_list):
+        if len(rooms_list) >= len(enemy_list):
             center = rooms_list[i].center
-            enemy = Enemy(screen, center[0], center[1], 2)
+            enemy = Enemy(screen, center[0], center[1], 2, "skeleton_v2_3.png")
+            screen.blit(enemy.image, enemy.rect)
             enemy.create_enemy()
             enemy_dict[i] = enemy
-            enemy_list.append((center[0], center[1]))
+            enemy_list.append(enemy)
         else:
-            enemy_dict[i].move(player.rect.x, player.rect.y,player.rect.collidelistall(rooms_list))  # Движение врага к игроку
+            enemy_dict[i].move(player.rect.x, player.rect.y,
+                               player.rect.collidelistall(rooms_list))  # Движение врага к игроку
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            done = True
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                player.shoot(event.pos, rect_list, enemy_list)
+
 
 
     # Отрисовка
     level.create_rooms()
     level.create_doors()
     player.create_player()
-    screen.blit(telega, player.get_rect())
+    for en in enemy_list:
+        screen.blit(en.image, en.rect)
+    screen.blit(player.image, player.get_rect())
     pygame.display.flip()
     clock.tick(48)
 
