@@ -18,6 +18,8 @@ SPEED = 5
 
 # --- Функции ---
 
+
+
 def get_line_equation(p1, p2):
     """Возвращает уравнение прямой, проходящей через две точки."""
     x1, y1 = p1
@@ -129,8 +131,12 @@ class Player(pygame.sprite.Sprite):
             return False, True
 
     def shoot(self, pos: tuple[int, int], wall_list3, enemy_list3):
-        bullet: Bullet = Bullet(self.rect.centerx, self.rect.centery, pos)
+        bullet = Bullet(self.rect.centerx, self.rect.centery, pos)
         bullet.create(wall_list3, enemy_list3)
+
+    def update(self):
+        if self.rect.collidelistall(enemy_list):
+            self.kill()
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -159,6 +165,7 @@ class Enemy(pygame.sprite.Sprite):
             tester = pygame.Rect(cord[0], cord[1] + SPEED, 10, 10)
         if tester.colliderect(player_rect):
             del tester
+            pygame.quit()
             return False
         else:
             del tester
@@ -179,7 +186,6 @@ class Enemy(pygame.sprite.Sprite):
                 self.rect.y += self.speed
             if target_y < self.rect.y and self.possibility_of_movement('up', player_rect, (self.rect.x, self.rect.y)):
                 self.rect.y -= self.speed
-
 
 
 class Wall:
@@ -309,9 +315,10 @@ player = Player(560, 290, screen, 'priest1_v1_1.png')
 player_rect = player.get_rect()
 bullet_list = []
 enemy_list = []
-ennemy_list = []
 dead_list = []
 enemy_dict = {}
+score = 0
+game_over = False
 
 # --- Основной игровой цикл ---
 
@@ -362,7 +369,7 @@ while not done:
 
     # Движение врагов
     for i in range(len(rooms_list)):
-        if len(rooms_list) >= len(enemy_list):
+        if len(rooms_list) > len(enemy_list):
             center = rooms_list[i].center
             enemy = Enemy(screen, center[0], center[1], 2, "skeleton_v2_3.png")
             screen.blit(enemy.image, enemy.rect)
@@ -370,17 +377,15 @@ while not done:
             enemy_dict[i] = enemy
             enemy_list.append(enemy)
         else:
-            enemy_dict[i].move(player.rect.x, player.rect.y,
+            enemy_list[i].move(player.rect.x, player.rect.y,
                                player.rect.collidelistall(rooms_list))  # Движение врага к игроку
 
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 player.shoot(event.pos, rect_list, enemy_list)
-
-
+        if event.type == pygame.QUIT:
+            pygame.quit()
 
     # Отрисовка
     level.create_rooms()
@@ -390,6 +395,6 @@ while not done:
         screen.blit(en.image, en.rect)
     screen.blit(player.image, player.get_rect())
     pygame.display.flip()
-    clock.tick(48)
+    clock.tick(30)
 
 pygame.quit()
