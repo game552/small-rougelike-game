@@ -1,7 +1,7 @@
 import pygame
 import random
-
 import sys
+import math
 
 sys.setrecursionlimit(3000)
 
@@ -19,6 +19,15 @@ state = True
 
 
 # --- Функции ---
+
+
+def get_player_room(player_rect, rooms_group):
+    """Определяет, в какой комнате находится игрок."""
+    for room in rooms_group:
+        if player_rect.colliderect(room.rect):
+            return room  # Возвращаем объект комнаты игрока
+    return None  # Если комната не найдена
+
 
 def draw_text(surf, text, size, x, y):
     font = pygame.font.Font(FONT_NAME, size)
@@ -118,49 +127,56 @@ def create_line_points_y(start_x: int, start_y: int, end_x: int, end_y: int, ste
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, screen_player, filename):
-        pygame.sprite.Sprite.__init__(self)
+        super().__init__()  # Инициализация базового класса
         self.image = pygame.image.load(filename).convert_alpha()
         self.screen = screen_player
         self.image = pygame.transform.scale(self.image, (15, 15))
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-
-    def create_player(self):
-        pygame.draw.rect(self.screen, PLAYER_COLOR, self.rect, 0)
-
-    def get_rect(self):
-        return self.rect
-
-    @staticmethod
-    def possibility_of_movement(directory_of_movement, rect_list, cord, rect_list2):
-        if directory_of_movement == 'right':
-            tester = pygame.Rect(cord[0] + 10, cord[1], 10, 10)
-        elif directory_of_movement == 'left':
-            tester = pygame.Rect(cord[0] - SPEED, cord[1], 10, 10)
-        elif directory_of_movement == 'up':
-            tester = pygame.Rect(cord[0], cord[1] - SPEED, 10, 10)
-        else:
-            tester = pygame.Rect(cord[0], cord[1] + 10, 10, 10)
-        if tester.collidelistall(rect_list2) and state:
-            del tester
-            return True, True
-        elif tester.collidelistall(rect_list) and state:
-            del tester
-            return False, False
-        else:
-            del tester
-            return False, True
-
-    def shoot(self, pos: tuple[int, int], wall_list3, enemy_list3):
-        bullet = Bullet(self.rect.centerx, self.rect.centery, pos)
-        bullet.create(wall_list3, enemy_list3)
+        self.rect = self.image.get_rect(center=(x, y))  # Установка центра игрока
 
     def update(self):
-        if self.rect.collidelistall(enemy_list):
+        """Обновление состояния игрока и отрисовка."""
+        self.screen.blit(self.image, self.rect)  # Отрисовка изображения игрока
+
+    def possibility_of_movement(self, direction_of_movement, walls_group, doors_group):
+        """
+        Проверяет возможность движения в указанном направлении.
+        Игрок может двигаться через двери, несмотря на стены.
+        """
+        tester = self.rect.copy()  # Копируем текущий прямоугольник игрока
+
+        # Определяем направление движения
+        if direction_of_movement == 'right':
+            tester.x += SPEED  # Перемещаем вправо
+        elif direction_of_movement == 'left':
+            tester.x -= SPEED  # Перемещаем влево
+        elif direction_of_movement == 'up':
+            tester.y -= SPEED  # Перемещаем вверх
+        elif direction_of_movement == 'down':
+            tester.y += SPEED  # Перемещаем вниз
+
+        # Проверка столкновения с дверями
+        door_collided = pygame.sprite.spritecollideany(self, doors_group)
+        if door_collided:
+            # Игнорируем стены, если дверь найдена
+            return True, True  # Возможность движения через дверь
+
+        # Если дверь не найдена, проверяем стены
+        if any(tester.colliderect(wall.rect) for wall in walls_group):
+            return False, False  # Столкновение со стеной
+
+        # Если нет стены и двери
+        return True, False
+
+    def shoot(self, target_pos: tuple[int, int], bullet_group):
+        """Создает пулю и добавляет в группу спрайтов."""
+        bullet = Bullet(self.rect.centerx, self.rect.centery, target_pos)
+        bullet_group.add(bullet)
+
+    def handle_collision_with_enemies(self, enemies_group):
+        """Обрабатывает столкновение с врагами."""
+        # Проверка на столкновение с врагами
+        if pygame.sprite.spritecollide(self, enemies_group, False):
             self.kill()
-
-
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -172,55 +188,90 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = speed
 
-    def get_current_room(self, room_list):
-        return self.rect.collidelistall(room_list)
-
-    def create_enemy(self):
+    def update(self):
+        """Отрисовка врага на экране."""
         self.screen.blit(self.image, self.rect)
 
     @staticmethod
     def can_move(tester, player_rect):
+        """Проверяет, может ли враг двигаться, и не столкнется ли он с игроком."""
         if tester.colliderect(player_rect):
             global game_over
             game_over = True
             return False
         return True
 
-    def move(self, target_x, target_y, current_room_player):
-        """Перемещает врага в сторону цели, если это возможно."""
+    def move(self, player_rect, current_room_player):
+        """
+        Перемещает врага в сторону игрока, если игрок находится в той же комнате.
+        Враг проверяет коллизии с игроком.
+        """
+        # Проверяем, находится ли игрок в одной комнате с врагом
         if current_room_player == self.get_current_room(rooms_list):
-            dx = target_x - self.rect.x
-            dy = target_y - self.rect.y
+            dx = player_rect.x - self.rect.x
+            dy = player_rect.y - self.rect.y
 
-            if abs(dx) > abs(dy):  # Двигаемся по x, если он более значителен
-                direction = 'right' if dx > 0 else 'left'
-                tester = self.rect.copy()
-                tester.x += self.speed if direction == 'right' else -self.speed
-                if self.can_move(tester, player_rect):
-                    self.rect.x += self.speed if direction == 'right' else -self.speed
-            else:  # Двигаемся по y
-                direction = 'down' if dy > 0 else 'up'
-                tester = self.rect.copy()
-                tester.y += self.speed if direction == 'down' else -self.speed
-                if self.can_move(tester, player_rect):
-                    self.rect.y += self.speed if direction == 'down' else -self.speed
+            # Нормализуем вектор движения, чтобы враг двигался одновременно по X и Y
+            distance = math.hypot(dx, dy)  # Расстояние между врагом и игроком
+            if distance == 0:
+                return  # Если враг уже на игроке, не двигаемся
+
+            direction_x = dx / distance
+            direction_y = dy / distance
+
+            # Создаем копию прямоугольника для тестирования движения
+            tester = self.rect.copy()
+            tester.x += direction_x * self.speed
+            tester.y += direction_y * self.speed
+
+            # Проверяем возможность движения
+            if self.can_move(tester, player_rect):
+                self.rect.x += direction_x * self.speed
+                self.rect.y += direction_y * self.speed
+
+    def handle_collision(self, direction):
+        """Обрабатывает столкновение с препятствием, откатывая движение."""
+        if direction == 'right':
+            self.rect.x -= self.speed  # Откатываем назад
+        elif direction == 'left':
+            self.rect.x += self.speed
+        elif direction == 'down':
+            self.rect.y -= self.speed
+        elif direction == 'up':
+            self.rect.y += self.speed
+
+    def get_current_room(self, rooms_group):
+        """Определяет, в какой комнате находится враг."""
+        for room in rooms_group:
+            if self.rect.colliderect(room.rect):
+                return room  # Возвращаем объект комнаты
+        return None  # Если комната не найдена
 
     def death(self):
-        self.kill()
+        """Обрабатывает смерть врага (анимация или эффекты могут быть добавлены)."""
+        self.kill()  # Удаляет врага из всех групп
 
 
-class Wall:
-    def __init__(self, screen):
-        self.screen = screen
+class Wall(pygame.sprite.Sprite):
+    def __init__(self, x, y, width, height, color, *groups):
+        super().__init__(*groups)
+        self.image = pygame.Surface((width, height))
+        self.image.fill(color)  # Цвет стены
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.center = self.rect.center
+
+    def update(self):
+        # Если нужно обновлять состояние стен, это можно сделать здесь
+        pass
 
 
-class CreateRooms(Wall):
+class CreateRooms:
     def __init__(self, rooms, screen):
-        super().__init__(screen)
-        self.rect_list = []
+        self.screen = screen
         self.rooms = rooms
-        self.doors = []
-        self.rooms_rects = []
+        self.wall_group = pygame.sprite.Group()  # Группа для стен
+        self.door_group = pygame.sprite.Group()  # Группа для дверей
+        self.room_group = pygame.sprite.Group()  # Группа для комнат (для коллизий или других целей)
 
     def create_rooms(self):
         y_top = 0
@@ -230,24 +281,16 @@ class CreateRooms(Wall):
         for y, level in enumerate(self.rooms):
             for x, room in enumerate(level):
                 if room:
-                    # Отрисовка стен
-                    pygame.draw.rect(self.screen, (145, 255, 255),
-                                     (x * WALL_WIDTH, y_top, WALL_WIDTH, 15), 0)  # Верхняя
-                    pygame.draw.rect(self.screen, (145, 255, 255),
-                                     (x * WALL_WIDTH, y_bottom, WALL_WIDTH, 15), 0)  # Нижняя
-                    pygame.draw.rect(self.screen, (255, 0, 255),
-                                     (x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)  # Левая
-                    pygame.draw.rect(self.screen, (255, 0, 0),
-                                     (x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT), 0)  # Правая
+                    # Создание и добавление стен в группу спрайтов
+                    Wall(x * WALL_WIDTH, y_top, WALL_WIDTH, 15, (145, 255, 255), self.wall_group)  # Верхняя стена
+                    Wall(x * WALL_WIDTH, y_bottom, WALL_WIDTH, 15, (145, 255, 255), self.wall_group)  # Нижняя стена
+                    Wall(x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT, (255, 0, 255),
+                         self.wall_group)  # Левая стена
+                    Wall(x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT, (255, 0, 0),
+                         self.wall_group)  # Правая стена
 
-                    # Добавление прямоугольников стен в список
-                    self.rect_list.append(pygame.Rect(x * WALL_WIDTH, y_top, WALL_WIDTH, 15))
-                    self.rect_list.append(pygame.Rect(x * WALL_WIDTH, y_bottom, WALL_WIDTH, 15))
-                    self.rect_list.append(pygame.Rect(x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT))
-                    self.rect_list.append(pygame.Rect(x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT))
-
-                    # Добавление прямоугольника комнаты в список
-                    self.rooms_rects.append(pygame.Rect(x * WALL_WIDTH, y * WALL_HEIGHT, WALL_WIDTH, WALL_HEIGHT))
+                    # Создание комнаты как спрайт для коллизий
+                    Wall(x * WALL_WIDTH, y * WALL_HEIGHT, WALL_WIDTH, WALL_HEIGHT, (0, 0, 0), self.room_group)
 
             y_top += WALL_HEIGHT
             y_bottom += WALL_HEIGHT
@@ -259,62 +302,71 @@ class CreateRooms(Wall):
             for x, room in enumerate(level):
                 if room:
                     if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
-                        # Отрисовка двери справа
-                        pygame.draw.rect(self.screen, (0, 40, 0),
-                                         (x * WALL_WIDTH + WALL_WIDTH - 3, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
-                                          22, 50), 0)
-                        self.doors.append(pygame.Rect(
-                            x * WALL_WIDTH + WALL_WIDTH - 2, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15, 22, 50))
-
+                        # Создание двери справа
+                        Wall(x * WALL_WIDTH + WALL_WIDTH - 3, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
+                             22, 50, (0, 40, 0), self.door_group)
                     if y < len(self.rooms) - 1 and self.rooms[y + 1][x]:
-                        # Отрисовка двери снизу
-                        pygame.draw.rect(self.screen, (0, 255, 0),
-                                         (x * WALL_WIDTH + WALL_WIDTH // 2 - 15, y * WALL_HEIGHT + WALL_HEIGHT - 5, 45,
-                                          22), 0)
-                        self.doors.append(pygame.Rect(
-                            x * WALL_WIDTH + WALL_WIDTH // 2 - 15, y * WALL_HEIGHT + WALL_HEIGHT - 5, 45, 22))
+                        # Создание двери снизу
+                        Wall(x * WALL_WIDTH + (WALL_WIDTH // 2) - 15, y * WALL_HEIGHT + WALL_HEIGHT - 3,
+                             45, 22, (0, 255, 0), self.door_group)
 
-    def get_rect_list(self):
-        return self.rect_list
+    def get_wall_group(self):
+        return self.wall_group
 
-    def get_rooms(self):
-        return self.rooms_rects
+    def get_room_group(self):
+        return self.room_group
 
-    def get_door_list(self):
-        return self.doors
+    def get_door_group(self):
+        return self.door_group
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, target: tuple[int, int]):
-        pygame.sprite.Sprite.__init__(self)
-        self.x_target = target[0]
-        self.y_target = target[1]
-        self.image = pygame.Surface((42, 42))
-        self.image.fill((255, 255, 255))
+    def __init__(self, x, y, target: tuple[int, int], speed=10):
+        super().__init__()
+        # Задание начальных координат пули
         self.x = x
         self.y = y
-        self.rect = pygame.Rect(x, y, 5, 5)
-        self.room = self.rect.collidelistall(rooms_list)
-        self.speedy = 10
-        bullet_list.append(self)
+        self.image = pygame.Surface((10, 10))
+        self.image.fill((255, 0, 0))  # Красная пуля
+        self.rect = self.image.get_rect(center=(x, y))
 
-    def create(self, wall_list2: list, enemy_list2: list):
-        pygame.draw.rect(screen, (255, 0, 0), self.rect, 0)
-        self.update(wall_list2, enemy_list2)
+        # Вычисление направления на цель (вектор движения)
+        self.x_target, self.y_target = target
+        self.direction_x, self.direction_y = self.calculate_direction(x, y, self.x_target, self.y_target)
+        self.speed = speed
 
-    def update(self, wall_list2: list, enemy_list2: list):
-        line = create_line_points_x(self.x, self.y, self.x_target, self.y_target)
-        line2 = create_line_points_y(self.x, self.y, self.x_target, self.y_target)
-        line.extend(j for j in line2 if j not in line)
-        for re in line:
-            rect = pygame.Rect(re[0], re[1], 5, 5)
-            if rect.collidelistall(rooms_list) == self.room:
-                if rect.collidelistall(enemy_list2):
-                    enemy_list.remove(enemy_list2[rect.collidelistall(enemy_list2)[0]])
-                    self.kill()
-                    return
-                else:
-                    pygame.draw.rect(screen, (255, 0, 0), rect, 4)
+    def calculate_direction(self, x_start, y_start, x_target, y_target):
+        # Вычисление направления как нормализованный вектор
+        dx = x_target - x_start
+        dy = y_target - y_start
+        distance = math.hypot(dx, dy)
+        if distance == 0:
+            return 0, 0  # Если расстояние 0, пуля никуда не двигается
+        return dx / distance, dy / distance
+
+    def update(self, wall_list, enemy_list):
+        # Обновление позиции пули
+        self.rect.x += self.direction_x * self.speed
+        self.rect.y += self.direction_y * self.speed
+
+        # Проверка на выход за пределы экрана
+        if not screen.get_rect().contains(self.rect):
+            self.kill()  # Удаление пули, если она вышла за пределы экрана
+
+        # Проверка на столкновение с врагами
+        enemy_hit_list = pygame.sprite.spritecollide(self, enemy_list, True)
+        if enemy_hit_list:
+            for enemy in enemy_hit_list:
+                enemy.kill()  # Удаление врага при попадании пули
+            self.kill()  # Удаление пули после попадания
+
+        # Проверка на столкновение со стенами
+        if pygame.sprite.spritecollideany(self, wall_list):
+            self.kill()  # Удаление пули при столкновении со стеной
+
+    def draw(self, screen):
+        # Отрисовка пули на экране
+        screen.blit(self.image, self.rect)
 
 
 # --- Инициализация игры ---
@@ -333,9 +385,9 @@ rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), rand
 # --- Создание игрока и врагов ---
 
 player = Player(560, 290, screen, 'priest1_v1_1.png')
-player_rect = player.get_rect()
-bullet_list = []
-enemy_list = []
+player_rect = player.rect
+bullet_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 dead_list = []
 visited_rooms = []
 count_enemy = 0
@@ -343,17 +395,22 @@ enemy_dict = {}
 score = 0
 game_over = False
 
+# Создание комнат и дверей
+
 level = CreateRooms(rooms, screen)
 level.create_rooms()
 level.create_doors()
-rect_list = level.get_rect_list()
-door_list = level.get_door_list()
-rooms_list = level.get_rooms()
+wall_list = level.get_wall_group()
+door_list = level.get_door_group()
+rooms_list = level.get_room_group()
 
-for i in range(len(rooms_list)):
-    center = rooms_list[i].center
+# создание врагов
+
+
+for room in rooms_list:
+    center = room.center
     enemy = Enemy(screen, center[0], center[1], 2, "skeleton_v2_3.png")
-    enemy_list.append(enemy)
+    enemy_group.add(enemy)
 
 # --- Основной игровой цикл ---
 
@@ -369,26 +426,26 @@ while state:
         # --- Создание игрока и врагов ---
 
         player = Player(560, 290, screen, 'priest1_v1_1.png')
-        player_rect = player.get_rect()
+        player_rect = player.rect
         bullet_list = []
-        enemy_list = []
+        enemy_group = pygame.sprite.Group()
         dead_list = []
         enemy_dict = {}
         score = 0
 
+        # Создание комнат и дверей
+
         level = CreateRooms(rooms, screen)
         level.create_rooms()
         level.create_doors()
-        rect_list = level.get_rect_list()
-        door_list = level.get_door_list()
-        rooms_list = level.get_rooms()
+        wall_list = level.get_wall_group()
+        door_list = level.get_door_group()
+        rooms_list = level.get_room_group()
 
-        for i in range(len(rooms_list)):
-            center = rooms_list[i].center
+        for room in rooms_list:
+            center = room.center
             enemy = Enemy(screen, center[0], center[1], 2, "skeleton_v2_3.png")
-            enemy_list.append(enemy)
-
-
+            enemy_group.add(enemy)
 
     # Очистка экрана
     screen.fill((0, 0, 0))
@@ -396,54 +453,58 @@ while state:
     # Обработка нажатий клавиш
     keys = pygame.key.get_pressed()
 
+    # Проверка нажатий клавиш для перемещения игрока
     if keys[pygame.K_a] and \
-            player.possibility_of_movement("left", rect_list, (player.rect.x, player.rect.y), door_list)[1]:
-        if player.possibility_of_movement("left", rect_list, (player.rect.x, player.rect.y), door_list)[0]:
+            player.possibility_of_movement("left", wall_list, door_list)[0]:
+        if player.possibility_of_movement("left", wall_list, door_list)[1]:
             player.rect.x -= 40
         else:
             player.rect.x -= SPEED
 
     if keys[pygame.K_d] and \
-            player.possibility_of_movement("right", rect_list, (player.rect.x, player.rect.y), door_list)[1]:
-        if player.possibility_of_movement("right", rect_list, (player.rect.x, player.rect.y), door_list)[0]:
+            player.possibility_of_movement("right", wall_list, door_list)[0]:
+        if player.possibility_of_movement("right", wall_list, door_list)[1]:
             player.rect.x += 40
         else:
             player.rect.x += SPEED
 
     if keys[pygame.K_s] and \
-            player.possibility_of_movement("down", rect_list, (player.rect.x, player.rect.y), door_list)[1]:
-        if player.possibility_of_movement("down", rect_list, (player.rect.x, player.rect.y), door_list)[0]:
+            player.possibility_of_movement("down", wall_list, door_list)[0]:
+        if player.possibility_of_movement("down", wall_list, door_list)[1]:
             player.rect.y += 40
         else:
             player.rect.y += SPEED
 
-    if keys[pygame.K_w] and player.possibility_of_movement("up", rect_list, (player.rect.x, player.rect.y), door_list)[
-        1]:
-        if player.possibility_of_movement("up", rect_list, (player.rect.x, player.rect.y), door_list)[0]:
+    if keys[pygame.K_w] and player.possibility_of_movement("up", wall_list, door_list)[
+        0]:
+        if player.possibility_of_movement("up", wall_list, door_list)[1]:
             player.rect.y -= 40
         else:
             player.rect.y -= SPEED
 
     # Движение врагов
-    for enemy in enemy_list:
-        enemy.move(player.rect.x, player.rect.y, player.rect.collidelistall(rooms_list))
+    for enemy in enemy_group:
+        enemy.move(player.rect, get_player_room(player_rect, rooms_list))
+
+    # В игровом цикле добавьте логику для обновления пуль:
+    for bullet in bullet_group:
+        bullet.update(wall_list, enemy_group)  # Обновляем состояние пули
+        bullet.draw(screen)  # Отрисовываем пулю на экране
 
     for event in pygame.event.get():
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                player.shoot(event.pos, rect_list, enemy_list)
+                player.shoot(event.pos, bullet_group)  # Стрельба пулями
         if event.type == pygame.QUIT:
             pygame.quit()
-
-
+            exit()
 
     # Отрисовка
-    level.create_rooms()
-    level.create_doors()
-    player.create_player()
-    for en in enemy_list:
-        screen.blit(en.image, en.rect)
-    screen.blit(player.image, player.get_rect())
+    level.wall_group.draw(screen)
+    level.door_group.draw(screen)
+    enemy_group.update()
+    player.update()
+    screen.blit(player.image, player.rect)
     pygame.display.flip()
     clock.tick(48)
 
