@@ -43,6 +43,22 @@ def show_go_screen():
     waiting = True
     while waiting:
         clock.tick(48)
+        screen.fill((0, 0, 0))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+        if pygame.key.get_pressed()[pygame.K_r]:
+            waiting = False
+
+
+def show_win_screen():
+    draw_text(screen, "YOU WIN!!!!", 36, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+    draw_text(screen, "Press a R to begin", 18, SCREEN_WIDTH / 2, SCREEN_HEIGHT * 3 / 4)
+    pygame.display.flip()
+    screen.fill((0, 0, 0))
+    waiting = True
+    while waiting:
+        clock.tick(48)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -261,8 +277,9 @@ class Wall(pygame.sprite.Sprite):
         self.center = self.rect.center
 
     def update(self):
-        # Если нужно обновлять состояние стен, это можно сделать здесь
         pass
+
+
 
 
 class CreateRooms:
@@ -283,10 +300,11 @@ class CreateRooms:
                 if room:
                     # Создание и добавление стен в группу спрайтов
                     Wall(x * WALL_WIDTH, y_top, WALL_WIDTH, 15, (145, 255, 255), self.wall_group)  # Верхняя стена
-                    Wall(x * WALL_WIDTH, y_bottom, WALL_WIDTH, 15, (145, 255, 255), self.wall_group)  # Нижняя стена
+                    Wall(x * WALL_WIDTH, y_bottom - 15, WALL_WIDTH, 15, (145, 255, 255), self.wall_group)
+                    # Нижняя стена
                     Wall(x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT, (255, 0, 255),
                          self.wall_group)  # Левая стена
-                    Wall(x * WALL_WIDTH + WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT, (255, 0, 0),
+                    Wall(x * WALL_WIDTH + WALL_WIDTH - 15, y * WALL_HEIGHT, 15, WALL_HEIGHT, (255, 0, 0),
                          self.wall_group)  # Правая стена
 
                     # Создание комнаты как спрайт для коллизий
@@ -303,12 +321,12 @@ class CreateRooms:
                 if room:
                     if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
                         # Создание двери справа
-                        Wall(x * WALL_WIDTH + WALL_WIDTH - 3, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
-                             22, 50, (0, 40, 0), self.door_group)
+                        Wall(x * WALL_WIDTH + WALL_WIDTH - 20, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
+                             39, 50, (0, 40, 0), self.door_group)
                     if y < len(self.rooms) - 1 and self.rooms[y + 1][x]:
                         # Создание двери снизу
-                        Wall(x * WALL_WIDTH + (WALL_WIDTH // 2) - 15, y * WALL_HEIGHT + WALL_HEIGHT - 3,
-                             45, 22, (0, 255, 0), self.door_group)
+                        Wall(x * WALL_WIDTH + (WALL_WIDTH // 2) - 25, y * WALL_HEIGHT + WALL_HEIGHT - 20,
+                             50, 39, (0, 255, 0), self.door_group)
 
     def get_wall_group(self):
         return self.wall_group
@@ -326,7 +344,7 @@ class Bullet(pygame.sprite.Sprite):
         # Задание начальных координат пули
         self.x = x
         self.y = y
-        self.image = pygame.Surface((10, 10))
+        self.image = pygame.Surface((5, 5))
         self.image.fill((255, 0, 0))  # Красная пуля
         self.rect = self.image.get_rect(center=(x, y))
 
@@ -394,6 +412,7 @@ count_enemy = 0
 enemy_dict = {}
 score = 0
 game_over = False
+win_end = False
 
 # Создание комнат и дверей
 
@@ -409,15 +428,19 @@ rooms_list = level.get_room_group()
 
 for room in rooms_list:
     center = room.center
-    enemy = Enemy(screen, center[0], center[1], 2, "skeleton_v2_3.png")
+    enemy = Enemy(screen, center[0], center[1], 3, "skeleton_v2_3.png")
     enemy_group.add(enemy)
 
 # --- Основной игровой цикл ---
 
 
 while state:
-    if game_over:
-        show_go_screen()
+    if game_over or win_end:
+        if game_over:
+            show_go_screen()
+        if win_end:
+            show_win_screen()
+        win_end = False
         game_over = False
         rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
                  [1, 1, 1, 1],
@@ -444,8 +467,10 @@ while state:
 
         for room in rooms_list:
             center = room.center
-            enemy = Enemy(screen, center[0], center[1], 2, "skeleton_v2_3.png")
+            enemy = Enemy(screen, center[0], center[1], 3, "skeleton_v2_3.png")
             enemy_group.add(enemy)
+    if len(enemy_group) == 0:
+        win_end = True
 
     # Очистка экрана
     screen.fill((0, 0, 0))
@@ -457,28 +482,28 @@ while state:
     if keys[pygame.K_a] and \
             player.possibility_of_movement("left", wall_list, door_list)[0]:
         if player.possibility_of_movement("left", wall_list, door_list)[1]:
-            player.rect.x -= 40
+            player.rect.x -= 52
         else:
             player.rect.x -= SPEED
 
     if keys[pygame.K_d] and \
             player.possibility_of_movement("right", wall_list, door_list)[0]:
         if player.possibility_of_movement("right", wall_list, door_list)[1]:
-            player.rect.x += 40
+            player.rect.x += 52
         else:
             player.rect.x += SPEED
 
     if keys[pygame.K_s] and \
             player.possibility_of_movement("down", wall_list, door_list)[0]:
         if player.possibility_of_movement("down", wall_list, door_list)[1]:
-            player.rect.y += 40
+            player.rect.y += 52
         else:
             player.rect.y += SPEED
 
     if keys[pygame.K_w] and player.possibility_of_movement("up", wall_list, door_list)[
         0]:
         if player.possibility_of_movement("up", wall_list, door_list)[1]:
-            player.rect.y -= 40
+            player.rect.y -= 52
         else:
             player.rect.y -= SPEED
 
@@ -499,10 +524,17 @@ while state:
             pygame.quit()
             exit()
 
+
+
     # Отрисовка
     level.wall_group.draw(screen)
     level.door_group.draw(screen)
     enemy_group.update()
+    for room in rooms_list:
+        if player.rect.colliderect(room.rect):
+            pass
+        else:
+            screen.blit(room.image, room.rect)
     player.update()
     screen.blit(player.image, player.rect)
     pygame.display.flip()
