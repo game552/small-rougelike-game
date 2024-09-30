@@ -139,6 +139,14 @@ def create_line_points_y(start_x: int, start_y: int, end_x: int, end_y: int, ste
     return points
 
 
+def room_is_clear(room_list, enemy_group, player_rect):
+    room = get_player_room(player_rect, room_list)
+    for enemy in enemy_group:
+        if room.rect.colliderect(enemy.rect):
+            return False
+    return True
+
+
 # --- Классы ---
 
 class Player(pygame.sprite.Sprite):
@@ -171,10 +179,11 @@ class Player(pygame.sprite.Sprite):
             tester.y += SPEED  # Перемещаем вниз
 
         # Проверка столкновения с дверями
-        door_collided = pygame.sprite.spritecollideany(self, doors_group)
-        if door_collided:
-            # Игнорируем стены, если дверь найдена
-            return True, True  # Возможность движения через дверь
+        for door in doors_group:
+            door_collided = tester.colliderect(door.rect)
+            if door_collided:
+                # Игнорируем стены, если дверь найдена
+                return True, True  # Возможность движения через дверь
 
         # Если дверь не найдена, проверяем стены
         if any(tester.colliderect(wall.rect) for wall in walls_group):
@@ -280,6 +289,10 @@ class Wall(pygame.sprite.Sprite):
         pass
 
 
+class Door(Wall):
+    def __init__(self, x, y, width, height, color, target_room, *groups):
+        super().__init__(x, y, width, height, color, *groups)
+        self.target_room = target_room
 
 
 class CreateRooms:
@@ -300,8 +313,8 @@ class CreateRooms:
                 if room:
                     # Создание и добавление стен в группу спрайтов
                     Wall(x * WALL_WIDTH, y_top, WALL_WIDTH, 15, (145, 255, 255), self.wall_group)  # Верхняя стена
-                    Wall(x * WALL_WIDTH, y_bottom - 15, WALL_WIDTH, 15, (145, 255, 255), self.wall_group)
-                    # Нижняя стена
+                    Wall(x * WALL_WIDTH, y_bottom - 15, WALL_WIDTH, 15, (145, 255, 255),
+                         self.wall_group)  # Нижняя стена
                     Wall(x * WALL_WIDTH, y * WALL_HEIGHT, 15, WALL_HEIGHT, (255, 0, 255),
                          self.wall_group)  # Левая стена
                     Wall(x * WALL_WIDTH + WALL_WIDTH - 15, y * WALL_HEIGHT, 15, WALL_HEIGHT, (255, 0, 0),
@@ -319,14 +332,12 @@ class CreateRooms:
         for y, level in enumerate(self.rooms):
             for x, room in enumerate(level):
                 if room:
-                    if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:
-                        # Создание двери справа
-                        Wall(x * WALL_WIDTH + WALL_WIDTH - 20, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 15,
-                             39, 50, (0, 40, 0), self.door_group)
-                    if y < len(self.rooms) - 1 and self.rooms[y + 1][x]:
-                        # Создание двери снизу
-                        Wall(x * WALL_WIDTH + (WALL_WIDTH // 2) - 25, y * WALL_HEIGHT + WALL_HEIGHT - 20,
-                             50, 39, (0, 255, 0), self.door_group)
+                    if x < len(self.rooms[y]) - 1 and self.rooms[y][x + 1]:  # Справа
+                        Door(x * WALL_WIDTH + WALL_WIDTH - 15, y * WALL_HEIGHT + WALL_HEIGHT // 2 - 25,
+                             30, 50, (0, 255, 0), (y, x + 1), self.door_group)  # Исправлено
+                    if y < len(self.rooms) - 1 and self.rooms[y + 1][x]:  # Внизу
+                        Door(x * WALL_WIDTH + WALL_WIDTH // 2 - 15, y * WALL_HEIGHT + WALL_HEIGHT - 15,
+                             50, 30, (0, 255, 0), (y + 1, x), self.door_group)  # Исправлено
 
     def get_wall_group(self):
         return self.wall_group
@@ -482,28 +493,32 @@ while state:
     if keys[pygame.K_a] and \
             player.possibility_of_movement("left", wall_list, door_list)[0]:
         if player.possibility_of_movement("left", wall_list, door_list)[1]:
-            player.rect.x -= 52
+            if room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.x -= 52
         else:
             player.rect.x -= SPEED
 
     if keys[pygame.K_d] and \
             player.possibility_of_movement("right", wall_list, door_list)[0]:
         if player.possibility_of_movement("right", wall_list, door_list)[1]:
-            player.rect.x += 52
+            if room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.x += 52
         else:
             player.rect.x += SPEED
 
     if keys[pygame.K_s] and \
             player.possibility_of_movement("down", wall_list, door_list)[0]:
         if player.possibility_of_movement("down", wall_list, door_list)[1]:
-            player.rect.y += 52
+            if room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.y += 52
         else:
             player.rect.y += SPEED
 
     if keys[pygame.K_w] and player.possibility_of_movement("up", wall_list, door_list)[
         0]:
         if player.possibility_of_movement("up", wall_list, door_list)[1]:
-            player.rect.y -= 52
+            if room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.y -= 52
         else:
             player.rect.y -= SPEED
 
@@ -523,8 +538,6 @@ while state:
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-
-
 
     # Отрисовка
     level.wall_group.draw(screen)
