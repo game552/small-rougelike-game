@@ -7,11 +7,7 @@ sys.setrecursionlimit(3000)
 
 # --- Константы ---
 
-SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 600
-WALL_WIDTH = SCREEN_WIDTH // 4
-WALL_HEIGHT = SCREEN_HEIGHT // 3
-PLAYER_SIZE = 10
+PLAYER_SIZE = 20
 PLAYER_COLOR = (0, 0, 0)
 SPEED = 5
 FONT_NAME = pygame.font.match_font('arial')
@@ -98,7 +94,7 @@ def get_point_on_line_y(k: float, l: float, y: float) -> tuple:
 
 
 def create_line_points_x(start_x: int, start_y: int, end_x: int, end_y: int, step_size=10) -> list:
-    """возвращает точки прямой по оси x"""
+    """Возвращает точки прямой по оси x"""
     points = [(start_x, start_y)]
     k, l = get_line_equation((start_x, start_y), (end_x, end_y))
     if start_x < end_x:
@@ -120,7 +116,7 @@ def create_line_points_x(start_x: int, start_y: int, end_x: int, end_y: int, ste
 
 
 def create_line_points_y(start_x: int, start_y: int, end_x: int, end_y: int, step_size=10) -> list:
-    """возвращает точки прямой о оси y"""
+    """Возвращает точки прямой на оси y"""
     points = [(start_x, start_y)]
     k, l = get_line_equation((start_x, start_y), (end_x, end_y))
     if start_y < end_y:
@@ -355,7 +351,7 @@ class Bullet(pygame.sprite.Sprite):
         # Задание начальных координат пули
         self.x = x
         self.y = y
-        self.image = pygame.Surface((5, 5))
+        self.image = pygame.Surface((10, 10))
         self.image.fill((255, 0, 0))  # Красная пуля
         self.rect = self.image.get_rect(center=(x, y))
 
@@ -401,7 +397,12 @@ class Bullet(pygame.sprite.Sprite):
 # --- Инициализация игры ---
 
 pygame.init()
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+info = pygame.display.Info()
+SCREEN_WIDTH = info.current_w
+SCREEN_HEIGHT = info.current_h
+WALL_WIDTH = SCREEN_WIDTH // 4
+WALL_HEIGHT = SCREEN_HEIGHT // 3
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.NOFRAME)
 
 clock = pygame.time.Clock()
 
@@ -413,8 +414,7 @@ rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), rand
 
 # --- Создание игрока и врагов ---
 
-player = Player(560, 290, screen, 'priest1_v1_1.png')
-player_rect = player.rect
+
 bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 dead_list = []
@@ -422,8 +422,10 @@ visited_rooms = []
 count_enemy = 0
 enemy_dict = {}
 score = 0
+click_counter = 0
 game_over = False
 win_end = False
+mouse_held = False
 
 # Создание комнат и дверей
 
@@ -433,14 +435,18 @@ level.create_doors()
 wall_list = level.get_wall_group()
 door_list = level.get_door_group()
 rooms_list = level.get_room_group()
+player = Player(rooms_list.sprites()[0].rect.center[0], rooms_list.sprites()[0].rect.center[1], screen,
+                'priest1_v1_1.png')
+player_rect = player.rect
 
 # создание врагов
 
 
 for room in rooms_list:
     center = room.center
-    enemy = Enemy(screen, center[0], center[1], 3, "skeleton_v2_3.png")
-    enemy_group.add(enemy)
+    if get_player_room(player_rect, rooms_list) != room:
+        enemy = Enemy(screen, center[0], center[1], 3, "skeleton_v2_3.png")
+        enemy_group.add(enemy)
 
 # --- Основной игровой цикл ---
 
@@ -453,14 +459,14 @@ while state:
             show_win_screen()
         win_end = False
         game_over = False
+        mouse_held = False
+        click_counter = 0
         rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
                  [1, 1, 1, 1],
                  [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
 
         # --- Создание игрока и врагов ---
 
-        player = Player(560, 290, screen, 'priest1_v1_1.png')
-        player_rect = player.rect
         bullet_list = []
         enemy_group = pygame.sprite.Group()
         dead_list = []
@@ -475,11 +481,14 @@ while state:
         wall_list = level.get_wall_group()
         door_list = level.get_door_group()
         rooms_list = level.get_room_group()
-
+        player = Player(rooms_list.sprites()[0].rect.center[0], rooms_list.sprites()[0].rect.center[1], screen,
+                        'priest1_v1_1.png')
+        player_rect = player.rect
         for room in rooms_list:
             center = room.center
-            enemy = Enemy(screen, center[0], center[1], 3, "skeleton_v2_3.png")
-            enemy_group.add(enemy)
+            if get_player_room(player_rect, rooms_list) != room:
+                enemy = Enemy(screen, center[0], center[1], 3, "skeleton_v2_3.png")
+                enemy_group.add(enemy)
     if len(enemy_group) == 0:
         win_end = True
 
@@ -532,12 +541,19 @@ while state:
         bullet.draw(screen)  # Отрисовываем пулю на экране
 
     for event in pygame.event.get():
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                player.shoot(event.pos, bullet_group)  # Стрельба пулями
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+
+    left_button, _, _ = pygame.mouse.get_pressed()
+
+    mouse_pos = pygame.mouse.get_pos()
+
+    if left_button:
+        click_counter += 1
+        if click_counter == 10:
+            player.shoot(mouse_pos, bullet_group)  # Игрок стреляет только на 7-й клик
+            click_counter = 0
 
     # Отрисовка
     level.wall_group.draw(screen)
@@ -551,6 +567,6 @@ while state:
     player.update()
     screen.blit(player.image, player.rect)
     pygame.display.flip()
-    clock.tick(48)
+    clock.tick(60)
 
 pygame.quit()
