@@ -1,113 +1,83 @@
-import heapq
-import random
+import pygame
+import math
 
+# --- Настройки ---
 
-class Grid:
-    def __init__(self, wight, height):
-        self.width = wight
-        self.height = height
+WIDTH = 600
+HEIGHT = 400
+RECT_SIZE = 20
+RECT_COLOR = (255, 0, 0)  # Красный
+SPEED = 2
 
-    def in_bounds(self, id):
-        (x, y) = id
-        return 0 <= x < self.width and 0 <= y < self.height
+# --- Функции ---
 
-    def neighbors(self, id):
-        (x, y) = id
-        results = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
-        if (x + y) % 2 == 0:
-            results.reverse()
-        results = filter(self.in_bounds, results)
-        return results
+def get_line_equation(p1, p2):
+    """Возвращает уравнение прямой, проходящей через две точки."""
+    x1, y1 = p1
+    x2, y2 = p2
+    if x1 == x2:
+        return float("inf"), x1  # Вертикальная линия
+    else:
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - slope * x1
+        return slope, intercept
 
+def get_point_on_line(slope, intercept, x):
+    """Возвращает точку на прямой с заданным x."""
+    if slope == float("inf"):
+        return x, intercept  # Вертикальная линия
+    else:
+        return x, slope * x + intercept
 
-class PriorityQueue:
-    def __init__(self):
-        self.elements = []
+# --- Инициализация ---
 
-    def empty(self):
-        return len(self.elements) == 0
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Движение по траектории")
+clock = pygame.time.Clock()
 
-    def put(self, item, priority):
-        heapq.heappush(self.elements, (priority, item))
+# --- Начальная позиция тела ---
 
-    def get(self):
-        return heapq.heappop(self.elements)[1]
+rect_x = 100
+rect_y = 100
+rect = pygame.Rect(rect_x, rect_y, RECT_SIZE, RECT_SIZE)
 
+# --- Траектория движения ---
 
-class GridWithWeights(Grid):
-    def __init__(self, width, height):
-        super().__init__(width, height)
-        self.weights = {}
+trajectory_points = [(100, 100), (200, 200), (300, 100), (400, 200)]
+current_point_index = 0
 
-    def cost(self, from_node, to_node):
-        return self.weights.get(to_node, 1)
+# --- Основной игровой цикл ---
 
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-def heuristic(a, b):
-    (x1, y1) = a
-    (x2, y2) = b
-    return abs(x1 - x2) + abs(y1 - y2)
+    screen.fill((0, 0, 0))  # Очистка экрана
 
+    # Отрисовка траектории
+    for i in range(len(trajectory_points) - 1):
+        pygame.draw.line(screen, (255, 255, 255), trajectory_points[i], trajectory_points[i + 1], 2)
 
-def reconstruct_path(came_from, start, goal):
-    current = goal
-    path = [current]
-    while current != start:
-        current = came_from[current]
-        path.append(current)
-    path.append(start)  # необязательно
-    path.reverse()  # необязательно
-    return path
+    # Отрисовка тела
+    pygame.draw.rect(screen, RECT_COLOR, rect)
 
+    # Перемещение тела по траектории
+    if current_point_index < len(trajectory_points) - 1:
+        target_x, target_y = trajectory_points[current_point_index + 1]
+        slope, intercept = get_line_equation((rect_x + RECT_SIZE // 2, rect_y + RECT_SIZE // 2),
+                                             (target_x, target_y))
 
-def draw_tile(graph, id, style):
-    r = " . "
-    if 'number' in style and id in style['number']: r = " %-2d" % style['number'][id]
-    if 'point_to' in style and style['point_to'].get(id, None) is not None:
-        (x1, y1) = id
-        (x2, y2) = style['point_to'][id]
-        if x2 == x1 + 1: r = " > "
-        if x2 == x1 - 1: r = " < "
-        if y2 == y1 + 1: r = " v "
-        if y2 == y1 - 1: r = " ^ "
-    if 'path' in style and id in style['path']:   r = " @ "
-    if 'start' in style and id == style['start']: r = " A "
-    if 'goal' in style and id == style['goal']:   r = " Z "
-    return r
+        if rect_x + RECT_SIZE // 2 < target_x:
+            rect_x += SPEED
+            rect.x = rect_x
+            rect.y = get_point_on_line(slope, intercept, rect_x + RECT_SIZE // 2)[1] - RECT_SIZE // 2
+        else:
+            current_point_index += 1
 
+    pygame.display.flip()
+    clock.tick(60)
 
-def a_star_search(graph, start, goal):
-    frontier = PriorityQueue()
-    frontier.put(start, 0)
-    came_from = {}
-    cost_so_far = {}
-    came_from[start] = None
-    cost_so_far[start] = 0
-
-    while not frontier.empty():
-        current = frontier.get()
-
-        if current == goal:
-            break
-
-        for next in graph.neighbors(current):
-            new_cost = cost_so_far[current] + graph.cost(current, next)
-            if next not in cost_so_far or new_cost < cost_so_far[next]:
-                cost_so_far[next] = new_cost
-                priority = new_cost + heuristic(goal, next)
-                frontier.put(next, priority)
-                came_from[next] = current
-
-    return came_from, cost_so_far
-
-
-def draw_grid(graph, **style):
-    print("___" * graph.width)
-    for y in range(graph.height):
-        for x in range(graph.width):
-            print("%s" % draw_tile(graph, (x, y), style), end="")
-        print()
-    print("~~~" * graph.width)
-
-
-
+pygame.quit()
