@@ -79,189 +79,222 @@ class Enemy(pygame.sprite.Sprite):
         """Обрабатывает смерть врага (анимация или эффекты могут быть добавлены)."""
         self.kill()  # Удаляет врага из всех групп
 
-if __name__ == "__main___":
-    sys.setrecursionlimit(3000)
-
-    # --- Генерация комнат ---
-
-    rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
-             [1, 1, 1, 1],
-             [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
-
-    # --- Создание игрока и врагов ---
 
 
-    bullet_group = pygame.sprite.Group()
-    enemy_group = pygame.sprite.Group()
-    dead_list = []
-    visited_rooms = []
-    count_enemy = 0
-    enemy_dict = {}
-    score = 0
-    click_counter = 0
-    game_over = False
-    win_end = False
-    mouse_held = False
+sys.setrecursionlimit(3000)
 
-    # Создание комнат и дверей
+# --- Генерация комнат ---
 
-    level = Level_generation.CreateRooms(rooms, Level_generation.screen)
-    level.create_rooms()
-    level.create_doors()
-    wall_list = level.get_wall_group()
-    door_list = level.get_door_group()
-    rooms_list = level.get_room_group()
-    player = Player(rooms_list.sprites()[0].rect.center[0], rooms_list.sprites()[0].rect.center[1], Level_generation.screen,
-                    'priest1_v1_1.png')
-    player_rect = player.rect
+rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
+         [1, 1, 1, 1],
+         [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
 
-    # создание врагов
+# --- Создание игрока и врагов ---
 
-    a = random.randint(1, 10)
-    for room in rooms_list:
-        center = room.center
-        if Level_generation.get_player_room(player_rect, rooms_list) != room:
-            for i in range(a):
-                enemy = Enemy(Level_generation.screen,
-                              random.randint(abs(Level_generation.WALL_WIDTH // 2 - center[0] - 15),
-                                             abs(Level_generation.WALL_WIDTH // 2 + center[0] - 15)),
-                              random.randint(abs(Level_generation.WALL_HEIGHT // 2 - center[1] - 15),
-                                             abs(Level_generation.WALL_HEIGHT // 2 + center[1] - 15)),
-                              3,
-                              "skeleton_v2_3.png")
-                enemy_group.add(enemy)
+bullet_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
+dead_list = []
+visited_rooms = []
+count_enemy = 0
+enemy_dict = {}
+score = 0
+click_counter = 0
+game_over = False
+win_end = False
+mouse_held = False
 
-    # --- Основной игровой цикл ---
+# Создание комнат и дверей
 
+level = Level_generation.CreateRooms(rooms, Level_generation.screen)
+level.create_rooms()
+level.create_doors()
+wall_list = level.get_wall_group()
+door_list = level.get_door_group()
+rooms_list = level.get_room_group()
+player = Player(rooms_list.sprites()[0].rect.center[0], rooms_list.sprites()[0].rect.center[1],
+                Level_generation.screen,
+                'priest1_v1_1.png')
+player_rect = player.rect
 
-    while Level_generation.state:
-        if game_over or win_end:
-            if game_over:
-                Level_generation.show_go_screen()
-            if win_end:
-                Level_generation.show_win_screen()
-            win_end = False
-            game_over = False
-            mouse_held = False
-            click_counter = 0
-            rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
-                     [1, 1, 1, 1],
-                     [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
+# создание врагов
 
-            # --- Создание игрока и врагов ---
+a = random.randint(1, 10)
+# Генерация врагов для каждой комнаты
+for room in rooms_list:
+    center = room.center
+    room_doors = [door for door in door_list if door.rect.colliderect(room.rect)]  # Двери в комнате
+    if Level_generation.get_player_room(player_rect, rooms_list) != room:
 
-            bullet_list = []
-            enemy_group = pygame.sprite.Group()
-            dead_list = []
-            enemy_dict = {}
-            score = 0
+        num_enemies = random.randint(1, 10)
+        for _ in range(num_enemies):
+            attempts = 0
+            while attempts < 100:
 
-            # Создание комнат и дверей
+                min_x = center[0] - (room.rect.width // 2) + 50
+                max_x = center[0] + (room.rect.width // 2) - 50
+                min_y = center[1] - (room.rect.height // 2) + 37
+                max_y = center[1] + (room.rect.height // 2) - 37
 
-            level = Level_generation.CreateRooms(rooms, Level_generation.screen)
-            level.create_rooms()
-            level.create_doors()
-            wall_list = level.get_wall_group()
-            door_list = level.get_door_group()
-            rooms_list = level.get_room_group()
-            player = Player(rooms_list.sprites()[0].rect.center[0], rooms_list.sprites()[0].rect.center[1],
-                            Level_generation.screen,
-                            'priest1_v1_1.png')
-            player_rect = player.rect
-            a = random.randint(1, 10)
-            for room in rooms_list:
-                center = room.center
-                if Level_generation.get_player_room(player_rect, rooms_list) != room:
-                    for i in range(a):
-                        enemy = Enemy(Level_generation.screen,
-                                      random.randint(abs(Level_generation.WALL_WIDTH // 2 - center[0] - 70),
-                                                     abs(Level_generation.WALL_WIDTH // 2 + center[0] - 70)),
-                                      random.randint(abs(Level_generation.WALL_HEIGHT // 2 - center[1] - 70),
-                                                     abs(Level_generation.WALL_HEIGHT // 2 + center[1] - 70)),
-                                      3,
-                                      "skeleton_v2_3.png")
-                        enemy_group.add(enemy)
-        if len(enemy_group) == 0:
-            win_end = True
+                # Генерируем координаты врага
+                enemy_x = random.randint(min_x, max_x)
+                enemy_y = random.randint(min_y, max_y)
 
-        # Очистка экрана
-        Level_generation.screen.fill((0, 0, 0))
+                if is_far_enough_from_doors(enemy_x, enemy_y, room_doors, 200):
+                    enemy = Enemy(Level_generation.screen,
+                                  enemy_x, enemy_y,
+                                  3,
+                                  "skeleton_v2_3.png")
+                    enemy_group.add(enemy)
+                    break
+                attempts += 1
 
-        # Обработка нажатий клавиш
-        keys = pygame.key.get_pressed()
+# --- Основной игровой цикл ---
 
-        # Проверка нажатий клавиш для перемещения игрока
-        if keys[pygame.K_a] and \
-                player.possibility_of_movement("left", wall_list, door_list)[0]:
-            if player.possibility_of_movement("left", wall_list, door_list)[1]:
-                if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
-                    player.rect.x -= 52
-            else:
-                player.rect.x -= Level_generation.SPEED
+while Level_generation.state:
+    if game_over or win_end:
+        if game_over:
+            Level_generation.show_go_screen()
+        if win_end:
+            Level_generation.show_win_screen()
+        win_end = False
+        game_over = False
+        mouse_held = False
+        click_counter = 0
+        rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
+                 [1, 1, 1, 1],
+                 [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
 
-        if keys[pygame.K_d] and \
-                player.possibility_of_movement("right", wall_list, door_list)[0]:
-            if player.possibility_of_movement("right", wall_list, door_list)[1]:
-                if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
-                    player.rect.x += 52
-            else:
-                player.rect.x += Level_generation.SPEED
+        # --- Создание игрока и врагов ---
 
-        if keys[pygame.K_s] and \
-                player.possibility_of_movement("down", wall_list, door_list)[0]:
-            if player.possibility_of_movement("down", wall_list, door_list)[1]:
-                if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
-                    player.rect.y += 52
-            else:
-                player.rect.y += Level_generation.SPEED
+        bullet_list = []
+        enemy_group = pygame.sprite.Group()
+        dead_list = []
+        enemy_dict = {}
+        score = 0
 
-        if keys[pygame.K_w] and player.possibility_of_movement("up", wall_list, door_list)[
-            0]:
-            if player.possibility_of_movement("up", wall_list, door_list)[1]:
-                if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
-                    player.rect.y -= 52
-            else:
-                player.rect.y -= Level_generation.SPEED
+        # Создание комнат и дверей
 
-        # Движение врагов
-        for enemy in enemy_group:
-            enemy.move(player.rect, Level_generation.get_player_room(player_rect, rooms_list), rooms_list)
-
-        # В игровом цикле добавьте логику для обновления пуль:
-        for bullet in bullet_group:
-            bullet.update(wall_list, enemy_group)  # Обновляем состояние пули
-            bullet.draw(Level_generation.screen)  # Отрисовываем пулю на экране
-
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    player.shoot(event.pos, bullet_group)
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-
-        left_button, _, _ = pygame.mouse.get_pressed()
-
-        mouse_pos = pygame.mouse.get_pos()
-
-        if left_button:
-            click_counter += 1
-            if click_counter == 10:
-                player.shoot(mouse_pos, bullet_group)  # Игрок стреляет только на 10-й клик
-                click_counter = 0
-
-        # Отрисовка
-        level.wall_group.draw(Level_generation.screen)
-        level.door_group.draw(Level_generation.screen)
-        enemy_group.update()
+        level = Level_generation.CreateRooms(rooms, Level_generation.screen)
+        level.create_rooms()
+        level.create_doors()
+        wall_list = level.get_wall_group()
+        door_list = level.get_door_group()
+        rooms_list = level.get_room_group()
+        player = Player(rooms_list.sprites()[0].rect.center[0], rooms_list.sprites()[0].rect.center[1],
+                        Level_generation.screen,
+                        'priest1_v1_1.png')
+        player_rect = player.rect
+        a = random.randint(1, 10)
+        # Генерация врагов для каждой комнаты
         for room in rooms_list:
-            if player.rect.colliderect(room.rect):
-                pass
-            else:
-                Level_generation.screen.blit(room.image, room.rect)
-        player.update()
-        Level_generation.screen.blit(player.image, player.rect)
-        pygame.display.flip()
-        Level_generation.clock.tick(60)
+            center = room.center
+            room_doors = [door for door in door_list if door.rect.colliderect(room.rect)]  # Двери в комнате
+            if Level_generation.get_player_room(player_rect, rooms_list) != room:
 
-    pygame.quit()
+                num_enemies = random.randint(1, 10)
+                for _ in range(num_enemies):
+                    attempts = 0
+                    while attempts < 100:
+
+                        min_x = center[0] - (room.rect.width // 2) + 50
+                        max_x = center[0] + (room.rect.width // 2) - 50
+                        min_y = center[1] - (room.rect.height // 2) + 37
+                        max_y = center[1] + (room.rect.height // 2) - 37
+
+                        # Генерируем координаты врага
+                        enemy_x = random.randint(min_x, max_x)
+                        enemy_y = random.randint(min_y, max_y)
+
+                        if is_far_enough_from_doors(enemy_x, enemy_y, room_doors, 200):
+                            enemy = Enemy(Level_generation.screen,
+                                          enemy_x, enemy_y,
+                                          3,
+                                          "skeleton_v2_3.png")
+                            enemy_group.add(enemy)
+                            break
+                        attempts += 1
+
+    if len(enemy_group) == 0:
+        win_end = True
+
+    # Очистка экрана
+    Level_generation.screen.fill((0, 0, 0))
+
+    # Обработка нажатий клавиш
+    keys = pygame.key.get_pressed()
+
+    # Проверка нажатий клавиш для перемещения игрока
+    if keys[pygame.K_a] and \
+            player.possibility_of_movement("left", wall_list, door_list)[0]:
+        if player.possibility_of_movement("left", wall_list, door_list)[1]:
+            if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.x -= 52
+        else:
+            player.rect.x -= Level_generation.SPEED
+
+    if keys[pygame.K_d] and \
+            player.possibility_of_movement("right", wall_list, door_list)[0]:
+        if player.possibility_of_movement("right", wall_list, door_list)[1]:
+            if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.x += 52
+        else:
+            player.rect.x += Level_generation.SPEED
+
+    if keys[pygame.K_s] and \
+            player.possibility_of_movement("down", wall_list, door_list)[0]:
+        if player.possibility_of_movement("down", wall_list, door_list)[1]:
+            if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.y += 52
+        else:
+            player.rect.y += Level_generation.SPEED
+
+    if keys[pygame.K_w] and player.possibility_of_movement("up", wall_list, door_list)[
+        0]:
+        if player.possibility_of_movement("up", wall_list, door_list)[1]:
+            if Level_generation.room_is_clear(rooms_list, enemy_group, player_rect):
+                player.rect.y -= 52
+        else:
+            player.rect.y -= Level_generation.SPEED
+
+    # Движение врагов
+    for enemy in enemy_group:
+        enemy.move(player.rect, Level_generation.get_player_room(player_rect, rooms_list), rooms_list)
+
+    # В игровом цикле добавьте логику для обновления пуль:
+    for bullet in bullet_group:
+        bullet.update(wall_list, enemy_group)  # Обновляем состояние пули
+        bullet.draw(Level_generation.screen)  # Отрисовываем пулю на экране
+
+    for event in pygame.event.get():
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                player.shoot(event.pos, bullet_group)
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
+
+    left_button, _, _ = pygame.mouse.get_pressed()
+    # dadad
+    mouse_pos = pygame.mouse.get_pos()
+
+    if left_button:
+        click_counter += 1
+        if click_counter == 10:
+            player.shoot(mouse_pos, bullet_group)  # Игрок стреляет только на 10-й клик
+            click_counter = 0
+
+    # Отрисовка
+    level.wall_group.draw(Level_generation.screen)
+    level.door_group.draw(Level_generation.screen)
+    enemy_group.update()
+    for room in rooms_list:
+        if player.rect.colliderect(room.rect):
+            pass
+        else:
+            Level_generation.screen.blit(room.image, room.rect)
+    player.update()
+    Level_generation.screen.blit(player.image, player.rect)
+    pygame.display.flip()
+    Level_generation.clock.tick(60)
+
+pygame.quit()

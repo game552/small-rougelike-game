@@ -1,9 +1,16 @@
 from CONST import *
 import pygame
+import math
 
 FONT_NAME = pygame.font.match_font('arial')
 
 
+# Функция для проверки расстояния между двумя точками
+def is_far_enough_from_doors(x, y, doors, min_distance):
+    for door in doors:
+        if math.hypot(x - door.rect.centerx, y - door.rect.centery) < min_distance:
+            return False
+    return True
 
 
 def get_player_room(player_rect, rooms_group):

@@ -1,4 +1,4 @@
-from CONST import *
+import CONST
 from functions import *
 import pygame
 

@@ -49,7 +49,7 @@ current_point_index = 0
 
 # --- Основной игровой цикл ---
 
-running = True
+running = False
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
