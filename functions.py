@@ -137,3 +137,20 @@ def room_is_clear(room_list, enemy_group, player_rect):
         if room.rect.colliderect(enemy.rect):
             return False
     return True
+
+
+def calculate_enemy_count(room, difficulty):
+    """
+    Рассчитывает количество врагов на основе размера комнаты и уровня сложности.
+    """
+    room_area = room.rect.width * room.rect.height
+    base_enemies = max(1, room_area // WALL_WIDTH * WALL_HEIGHT)  # Базовое количество врагов зависит от площади комнаты
+    return min(base_enemies * difficulty, 7)  # Ограничиваем количество врагов максимум 15
+
+
+def is_valid_spawn_point(x, y, room):
+    """
+    Проверяет, что точка спавна находится внутри комнаты и не на стенах.
+    """
+    return room.rect.left + 10 <= x <= room.rect.right - 10 and \
+           room.rect.top + 10 <= y <= room.rect.bottom - 10
