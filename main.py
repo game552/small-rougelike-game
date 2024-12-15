@@ -5,6 +5,8 @@ import Level_generation
 import pygame
 import random
 import sys
+import room_generation
+import queue
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -80,14 +82,17 @@ class Enemy(pygame.sprite.Sprite):
         self.kill()  # Удаляет врага из всех групп
 
 
-
 sys.setrecursionlimit(3000)
 
 # --- Генерация комнат ---
+game_map = room_generation.Map()
+game_map.set_cell(35, 'Start')
+game_map.que.put(35)
+game_map.conclusion.append(35)
 
-rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
-         [1, 1, 1, 1],
-         [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
+while not game_map.que.empty():
+    game_map.room_generation(game_map.que.get())
+rooms = game_map.return_map()
 
 # --- Создание игрока и врагов ---
 
@@ -123,30 +128,47 @@ a = random.randint(1, 10)
 for room in rooms_list:
     center = room.center
     room_doors = [door for door in door_list if door.rect.colliderect(room.rect)]  # Двери в комнате
-    if Level_generation.get_player_room(player_rect, rooms_list) != room:
 
-        num_enemies = random.randint(1, 10)
-        for _ in range(num_enemies):
-            attempts = 0
-            while attempts < 100:
+    # Проверяем, что комната действительно существует и находится в области уровня
+    if not room or not room.rect.colliderect(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)):
+        continue
 
-                min_x = center[0] - (room.rect.width // 2) + 50
-                max_x = center[0] + (room.rect.width // 2) - 50
-                min_y = center[1] - (room.rect.height // 2) + 37
-                max_y = center[1] + (room.rect.height // 2) - 37
+    # Пропускаем комнату, где находится игрок
+    if Level_generation.get_player_room(player_rect, rooms_list) == room:
+        continue
 
-                # Генерируем координаты врага
-                enemy_x = random.randint(min_x, max_x)
-                enemy_y = random.randint(min_y, max_y)
+    # Проверяем, достаточно ли большая комната для спавна врагов
+    if room.rect.width < 100 or room.rect.height < 100:
+        continue
 
-                if is_far_enough_from_doors(enemy_x, enemy_y, room_doors, 200):
-                    enemy = Enemy(Level_generation.screen,
-                                  enemy_x, enemy_y,
-                                  3,
-                                  "skeleton_v2_3.png")
-                    enemy_group.add(enemy)
-                    break
-                attempts += 1
+    # Рассчитываем количество врагов
+    difficulty = 1.5  # Например, уровень сложности
+    num_enemies = calculate_enemy_count(room, difficulty)
+
+    for _ in range(num_enemies):
+        attempts = 0
+        while attempts < 100:
+            min_x = room.rect.left + 10
+            max_x = room.rect.right - 10
+            min_y = room.rect.top + 10
+            max_y = room.rect.bottom - 10
+
+            # Генерируем координаты врага внутри области (ширина и высота комнаты уменьшены на 20)
+            enemy_x = random.randint(min_x + 10, max_x - 10)
+            enemy_y = random.randint(min_y + 10, max_y - 10)
+
+            # Проверяем расстояние до дверей
+            if is_far_enough_from_doors(enemy_x, enemy_y, room_doors, 100):
+                enemy = Enemy(
+                    screen,
+                    enemy_x, enemy_y,
+                    SPEED / 1.5,
+                    "skeleton_v2_3.png"
+                )
+                enemy_group.add(enemy)
+                break
+
+            attempts += 1
 
 # --- Основной игровой цикл ---
 
@@ -160,9 +182,15 @@ while Level_generation.state:
         game_over = False
         mouse_held = False
         click_counter = 0
-        rooms = [[random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)],
-                 [1, 1, 1, 1],
-                 [random.randint(0, 1), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1)]]
+        # --- Генерация комнат ---
+        game_map = room_generation.Map()
+        game_map.set_cell(35, 'Start')
+        game_map.que.put(35)
+        game_map.conclusion.append(35)
+
+        while not game_map.que.empty():
+            game_map.room_generation(game_map.que.get())
+        rooms = game_map.return_map()
 
         # --- Создание игрока и врагов ---
 
@@ -189,30 +217,47 @@ while Level_generation.state:
         for room in rooms_list:
             center = room.center
             room_doors = [door for door in door_list if door.rect.colliderect(room.rect)]  # Двери в комнате
-            if Level_generation.get_player_room(player_rect, rooms_list) != room:
 
-                num_enemies = random.randint(1, 10)
-                for _ in range(num_enemies):
-                    attempts = 0
-                    while attempts < 100:
+            # Проверяем, что комната действительно существует и находится в области уровня
+            if not room or not room.rect.colliderect(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)):
+                continue
 
-                        min_x = center[0] - (room.rect.width // 2) + 50
-                        max_x = center[0] + (room.rect.width // 2) - 50
-                        min_y = center[1] - (room.rect.height // 2) + 37
-                        max_y = center[1] + (room.rect.height // 2) - 37
+            # Пропускаем комнату, где находится игрок
+            if Level_generation.get_player_room(player_rect, rooms_list) == room:
+                continue
 
-                        # Генерируем координаты врага
-                        enemy_x = random.randint(min_x, max_x)
-                        enemy_y = random.randint(min_y, max_y)
+            # Проверяем, достаточно ли большая комната для спавна врагов
+            if room.rect.width < 100 or room.rect.height < 100:
+                continue
 
-                        if is_far_enough_from_doors(enemy_x, enemy_y, room_doors, 200):
-                            enemy = Enemy(Level_generation.screen,
-                                          enemy_x, enemy_y,
-                                          3,
-                                          "skeleton_v2_3.png")
-                            enemy_group.add(enemy)
-                            break
-                        attempts += 1
+            # Рассчитываем количество врагов
+            difficulty = 0.5  # Например, уровень сложности
+            num_enemies = calculate_enemy_count(room, difficulty)
+
+            for _ in range(num_enemies):
+                attempts = 0
+                while attempts < num_enemies:
+                    min_x = room.rect.left + 10
+                    max_x = room.rect.right - 10
+                    min_y = room.rect.top + 10
+                    max_y = room.rect.bottom - 10
+
+                    # Генерируем координаты врага внутри области (ширина и высота комнаты уменьшены на 20)
+                    enemy_x = random.randint(min_x + 10, max_x - 10)
+                    enemy_y = random.randint(min_y + 10, max_y - 10)
+
+                    # Проверяем расстояние до дверей
+                    if is_far_enough_from_doors(enemy_x, enemy_y, room_doors, 100):
+                        enemy = Enemy(
+                            screen,
+                            enemy_x, enemy_y,
+                            SPEED / 1.5,
+                            "skeleton_v2_3.png"
+                        )
+                        enemy_group.add(enemy)
+                        break
+
+                    attempts += 1
 
     if len(enemy_group) == 0:
         win_end = True
